@@ -12,7 +12,7 @@ jobs:
     steps:
       - checkout
       - run: git submodule update --init --recursive
-      - run: CI= (cd gephgui-wry/gephgui && npm ci && npm run build)
+      - run: (cd gephgui-wry/gephgui && npm ci && CI= npm run build)
       - run: bash windows/build-windows.bash
       # - run: bash sync-binaries.sh
       # - run: bash build-windows.sh
