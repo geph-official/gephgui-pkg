@@ -1,0 +1,48 @@
+app-id: io.geph.GephGui
+runtime: org.gnome.Platform
+runtime-version: "40"
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+  - org.freedesktop.Sdk.Extension.node14
+command: "gephgui-wry"
+modules:
+  - name: gephgui-wry
+    buildsystem: "simple"
+    build-commands:
+      - "git submodule update --init --recursive"
+      - "(cd gephgui && npm ci && npm run build)"
+      - "env CARGO_HOME=/run/build/ginkou-loader/cargo cargo build --release"
+      - "install -D ./target/release/gephgui-wry -t /app/bin"
+    sources:
+      - type: dir
+        path: "../gephgui-wry"
+  - name: blobs
+    buildsystem: "simple"
+    build-commands:
+      - "sh pull-geph4-client.sh"
+      - "install -D pac-real -t /app/bin"
+      - "install -D pac -t /app/bin"
+      - "install -D geph4-client -t /app/bin"
+    sources:
+      - type: dir
+        path: "../blobs/linux-x64"
+build-options:
+  append-path: "/usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/node14/bin"
+  build-args:
+    - --share=network
+finish-args:
+  # X11 + XShm access
+  - --share=ipc
+  - --socket=x11
+  # Wayland access
+  - --socket=wayland
+  # Needs to talk to the network:
+  - --share=network
+  # Needed for OpenGL
+  - --device=dri
+  # DConf access for configuring proxies
+  - --filesystem=host:rw
+  - --talk-name=ca.desrt.dconf
+  - --talk-name=org.freedesktop.Flatpak
+  - --env=DCONF_USER_CONFIG_DIR=.config/dconf

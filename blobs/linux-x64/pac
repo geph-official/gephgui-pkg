@@ -1,0 +1,5 @@
+#!/bin/bash
+
+mkdir -p ~/.geph-blobs
+cp $(which pac-real) ~/.geph-blobs
+flatpak-spawn --host ~/.geph-blobs/pac-real $@

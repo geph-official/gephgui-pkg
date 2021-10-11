@@ -1,0 +1,3 @@
+[submodule "gephgui-wry"]
+	path = gephgui-wry
+	url = https://github.com/geph-official/gephgui-wry.git
