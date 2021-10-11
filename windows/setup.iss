@@ -22,6 +22,7 @@ DefaultGroupName={cm:MyAppName}
 OutputBaseFilename=geph-windows-setup
 Compression=lzma2
 SolidCompression=yes
+WizardStyle=modern
 
 [Languages]
 Name: "en"; MessagesFile: "compiler:Default.isl"
