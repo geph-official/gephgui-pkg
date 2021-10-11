@@ -11,10 +11,6 @@ jobs:
       shell: bash.exe
     steps:
       - checkout
-      - run: curl https://files.jrsoftware.org/is/6/innosetup-6.2.0.exe > innosetup.exe
-      - run:
-          command: ./innosetup.exe /VERYQUIET /ALLUSERS
-          shell: powershell.exe
       - run: git submodule update --init --recursive
       - run: CI= (cd gephgui-wry/gephgui && npm ci && npm run build)
       - run: bash windows/build-windows.bash
