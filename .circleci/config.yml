@@ -14,8 +14,8 @@ jobs:
       - run: git submodule update --init --recursive
       - run: curl https://win.rustup.rs/ > rustup-init.exe
       - run: ./rustup-init -y --default-toolchain "stable-x86_64-pc-windows-msvc" --profile minimal
-      - run: PATH=$PATH:/c/Users/circleci/.cargo/bin CARGO_NET_GIT_FETCH_WITH_CLI=true bash windows/build-windows.bash
       - run: (cd gephgui-wry/gephgui && npm ci && CI= npm run build)
+      - run: PATH=$PATH:/c/Users/circleci/.cargo/bin CARGO_NET_GIT_FETCH_WITH_CLI=true bash windows/build-windows.bash
       # - run: bash sync-binaries.sh
       # - run: bash build-windows.sh
       # - run: sudo apt install python3-pip
