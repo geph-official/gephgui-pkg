@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+
 cd `dirname "$(readlink -f "$0")"`
 
 export VERSION=$(cat ../VERSION)
