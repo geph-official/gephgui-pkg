@@ -13,7 +13,7 @@ jobs:
       - checkout
       - run: git submodule update --init --recursive
       - run: curl https://win.rustup.rs/ > rustup-init.exe
-      - run: ./rustup-init -y --default-toolchain "stable-i686-pc-windows-msvc" --profile minimal
+      - run: ./rustup-init -y --default-toolchain "stable-i686-pc-windows-x86_64" --profile minimal
       - run: PATH=$PATH:/c/Users/circleci/.cargo/bin CARGO_NET_GIT_FETCH_WITH_CLI=true bash windows/build-windows.bash
       - run: (cd gephgui-wry/gephgui && npm ci && CI= npm run build)
       # - run: bash sync-binaries.sh
