@@ -52,7 +52,7 @@ Name: "{group}\{cm:UninstallProgram,{cm:MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\{cm:MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\MicrosoftEdgeWebview2Setup"; Description: "{cm:LaunchProgram,{cm:MyAppName}}"; Check: WebView2IsNotInstalled
+Filename: "{app}\MicrosoftEdgeWebview2Setup"; StatusMsg: : "Installing WebView2..."; Parameters: "/silent /install", Check: WebView2IsNotInstalled
 
 
 [Code]
