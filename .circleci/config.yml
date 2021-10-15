@@ -9,7 +9,7 @@ jobs:
     executor:
       name: win/default
       shell: bash.exe
-      size: 2xlarge
+      size: xlarge
     steps:
       - checkout
       - run: git submodule update --init --recursive
