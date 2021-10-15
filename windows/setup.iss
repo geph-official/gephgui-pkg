@@ -52,4 +52,26 @@ Name: "{group}\{cm:UninstallProgram,{cm:MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\{cm:MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{cm:MyAppName}}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\MicrosoftEdgeWebview2Setup"; Description: "{cm:LaunchProgram,{cm:MyAppName}}"; Check: WebView2IsNotInstalled
+
+
+[Code]
+function WebView2IsNotInstalled: Boolean;
+  var Pv: String;
+  var key64: String;
+  var key32: String;
+begin
+    key64 := 'SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}';
+    key32 := 'SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'; 
+    Result := True;
+    if RegQueryStringValue(HKEY_LOCAL_MACHINE, key64, 'pv', Pv) then 
+    begin
+        Result := 0 = Length(pV);
+    end
+    else begin
+       if RegQueryStringValue(HKEY_LOCAL_MACHINE, key32, 'pv', Pv)  then
+       begin
+          Result := 0 = Length(pV);
+       end;
+    end; 
+end;
