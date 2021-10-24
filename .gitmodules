@@ -1,3 +1,6 @@
 [submodule "gephgui-wry"]
 	path = gephgui-wry
 	url = https://github.com/geph-official/gephgui-wry.git
+[submodule "geph4-vpn-helper"]
+	path = geph4-vpn-helper
+	url = https://github.com/geph-official/geph4-vpn-helper.git
