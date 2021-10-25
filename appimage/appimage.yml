@@ -21,6 +21,7 @@ script:
   - HERE=$(dirname $(readlink -f "${0}"))
   - export LD_LIBRARY_PATH="${HERE}"/usr/lib/x86_64-linux-gnu/:"${HERE}"/lib/x86_64-linux-gnu/:$PATH
   - export LD_PRELOAD="${HERE}"/libunionpreload.so
+  - export PATH="${HERE}"/usr/bin/:$PATH
   - cd "${HERE}"/usr
   - bin/gephgui-wry $@
   - EOF

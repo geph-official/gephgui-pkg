@@ -1,7 +1,7 @@
 #!/bin/bash
 rm -rfv AppDir
 sudo apt-get update
-sudo apt-get -y install libgtk-3-dev libappindicator3-dev libwebkit2gtk-4.0-dev python3-pip curl patchelf strace
+sudo apt-get -y install libgtk-3-dev libappindicator3-dev libwebkit2gtk-4.0-dev python3-pip curl patchelf strace libpango1.0-dev libgdk-pixbuf2.0-dev
 sudo pip3 install appimage-builder
 sudo wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O /usr/local/bin/appimagetool
 sudo wget https://github.com/AppImage/pkg2appimage/releases/download/continuous/pkg2appimage-1807-x86_64.AppImage -O /usr/local/bin/pkg2appimage
@@ -19,7 +19,7 @@ cd ../gephgui-wry
 # git submodule update --init --recursive
 
 rm -rfv target/appimage
-CARGO_TARGET_DIR=target/appimage/ cargo build --release
+CARGO_TARGET_DIR=target/appimage/ cargo build --locked --release
 cp target/appimage/release/gephgui-wry ../appimage/
 
 cd ../appimage
