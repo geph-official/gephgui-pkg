@@ -8,7 +8,6 @@ jobs:
   build_appimage:
     machine:
       image: ubuntu-1604:202104-01
-      size: xlarge
     steps:
       - checkout
       - run: git submodule update --init --recursive
