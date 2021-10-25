@@ -18,8 +18,8 @@ cd ../gephgui-wry
 # git submodule update --init --recursive
 
 rm -rfv target/appimage
-CARGO_TARGET_DIR=target/appimage/ cargo build
-cp target/appimage/debug/gephgui-wry ../appimage/
+CARGO_TARGET_DIR=target/appimage/ cargo build --release
+cp target/appimage/release/gephgui-wry ../appimage/
 
 cd ../appimage
 #appimage-builder --skip-test
