@@ -1,0 +1,40 @@
+app: Geph
+union: true
+binpatch: true
+
+ingredients:
+  dist: buster
+  packages:
+    - libappindicator3-1
+    - libwebkit2gtk-4.0-37
+  sources:
+    - deb http://deb.debian.org/debian/ buster main
+  script:
+    - pwd
+    # - (cd ../ && bash build-appimage.bash)
+script:
+  - pwd
+  - cp ../../gephgui-wry usr/bin
+  - cp ../../../blobs/linux-x64/* usr/bin
+  - cat > ./AppRun <<\EOF
+  -  #!/bin/sh
+  - HERE=$(dirname $(readlink -f "${0}"))
+  - export LD_LIBRARY_PATH="${HERE}"/usr/lib/x86_64-linux-gnu/:"${HERE}"/lib/x86_64-linux-gnu/:$PATH
+  - export LD_PRELOAD="${HERE}"/libunionpreload.so
+  - cd "${HERE}"/usr
+  - bin/gephgui-wry $@
+  - EOF
+  - cat > Geph.desktop <<\EOF
+  - [Desktop Entry]
+  - Type=Application
+  - Name=Geph
+  - Comment=Anti-censorship tool
+  - Exec=gephgui-wry
+  - Terminal=false
+  - Icon=geph
+  - Categories=Application
+  - StartupWMClass=geph
+  - EOF
+  - chmod a+x ./AppRun
+  - cp ../../../VERSION ./VERSION
+  - cp ../../../gephgui-wry/src/logo-naked.png geph.png
