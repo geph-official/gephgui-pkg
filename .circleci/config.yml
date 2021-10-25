@@ -13,7 +13,7 @@ jobs:
       - run: git submodule update --init --recursive
       - run: curl https://sh.rustup.rs -sSf | sh -s -- -y
       - run: echo 'export PATH=$HOME/.cargo/bin:$PATH' >> $BASH_ENV
-      - run: (cd gephgui-wry/gephgui && npm ci && npm run build)
+      - run: (cd gephgui-wry/gephgui && npm ci && CI= npm run build)
       - run: (cd appimage && bash build-appimage.bash)
   build_windows:
     executor:
