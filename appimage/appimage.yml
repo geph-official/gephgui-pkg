@@ -3,12 +3,12 @@ union: true
 binpatch: true
 
 ingredients:
-  dist: buster
+  dist: xenial
   packages:
     - libappindicator3-1
     - libwebkit2gtk-4.0-37
   sources:
-    - deb http://deb.debian.org/debian/ buster main
+    - deb http://us.archive.ubuntu.com/ubuntu/ xenial main universe
   script:
     - pwd
     # - (cd ../ && bash build-appimage.bash)
