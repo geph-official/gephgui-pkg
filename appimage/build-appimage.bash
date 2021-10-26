@@ -1,4 +1,6 @@
 #!/bin/bash
+STARTPWD=$(pwd)
+
 rm -rfv AppDir
 sudo apt-get update
 sudo apt-get -y install libgtk-3-dev libappindicator3-dev libwebkit2gtk-4.0-dev python3-pip curl patchelf strace libpango1.0-dev libgdk-pixbuf2.0-dev
@@ -16,7 +18,7 @@ cd /opt/; sudo chmod +x pkg2appimage; sed -i 's|AI\x02|\x00\x00\x00|' pkg2appima
 sudo mv /opt/squashfs-root /opt/pkg2appimage.AppDir
 sudo ln -s /opt/pkg2appimage.AppDir/AppRun /usr/local/bin/pkg2appimage
 
-cd ~/project
+cd $STARTPWD
 
 
 mkdir -p AppDir/usr/local/bin
