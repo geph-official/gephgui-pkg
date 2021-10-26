@@ -24,4 +24,4 @@ cp target/appimage/release/gephgui-wry ../appimage/
 
 cd ../appimage
 #appimage-builder --skip-test
-pkg2appimage --appimage-extract-and-run appimage.yml
+APPIMAGE_EXTRACT_AND_RUN=1 pkg2appimage --appimage-extract-and-run appimage.yml
