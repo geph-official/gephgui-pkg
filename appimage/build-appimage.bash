@@ -16,6 +16,8 @@ cd /opt/; sudo chmod +x pkg2appimage; sed -i 's|AI\x02|\x00\x00\x00|' pkg2appima
 sudo mv /opt/squashfs-root /opt/pkg2appimage.AppDir
 sudo ln -s /opt/pkg2appimage.AppDir/AppRun /usr/local/bin/pkg2appimage
 
+cd ~/project
+
 
 mkdir -p AppDir/usr/local/bin
 (cd ../blobs/linux-x64 && sh ./pull-geph4-client.sh)
