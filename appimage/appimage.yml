@@ -3,12 +3,12 @@ union: true
 binpatch: true
 
 ingredients:
-  dist: xenial
+  dist: bionic
   packages:
     - libappindicator3-1
     - libwebkit2gtk-4.0-37
   sources:
-    - deb http://us.archive.ubuntu.com/ubuntu/ xenial main universe
+    - deb http://us.archive.ubuntu.com/ubuntu/ bionic main universe
   script:
     - pwd
     # - (cd ../ && bash build-appimage.bash)
