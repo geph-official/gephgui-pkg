@@ -16,6 +16,7 @@ script:
   - pwd
   - cp ../../gephgui-wry usr/bin
   - cp ../../../blobs/linux-x64/* usr/bin
+  - chmod +x usr/bin/*
   - cat > ./AppRun <<\EOF
   -  #!/bin/sh
   - HERE=$(dirname $(readlink -f "${0}"))
