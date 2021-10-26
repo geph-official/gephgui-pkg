@@ -18,8 +18,8 @@ jobs:
       - run: (cd gephgui-wry/gephgui && npm ci && CI= npm run build)
       - run: (cd appimage && bash build-appimage.bash)
       - store_artifacts:
-          path: appimage/out/Geph-.glibc2.18-x86_64.AppImage
-          destination: Geph.glibc2.18-x86_64.AppImage
+          path: appimage/Geph/Geph-x86_64.AppImage
+          destination: Geph-x86_64.AppImage
   build_windows:
     executor:
       name: win/default

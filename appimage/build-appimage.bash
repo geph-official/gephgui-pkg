@@ -37,3 +37,6 @@ cp target/appimage/release/gephgui-wry ../appimage/
 cd ../appimage
 #appimage-builder --skip-test
 pkg2appimage appimage.yml
+
+cd Geph
+appimagetool Geph.AppDir
