@@ -26,7 +26,7 @@ jobs:
     steps:
       - checkout
       - run: git submodule update --init --recursive
-      - run: sudo apt install flatpak-builder flatpak
+      - run: sudo apt update && install flatpak-builder flatpak
       - run: flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
       - run: flatpak-builder --force-clean --install-deps-from flathub --user build-dir flatpak/io.geph.GephGui.yml  --repo=repo
       - run: flatpak build-bundle repo io.geph.GephGui.flatpak io.geph.GephGui --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
