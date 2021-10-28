@@ -23,7 +23,7 @@ jobs:
   build_flatpak:
     machine:
       - image: ubuntu-2004:202107-02
-    - steps:
+    steps:
       - checkout
       - run: git submodule update --init --recursive
       - run: sudo apt install flatpak-builder flatpak
