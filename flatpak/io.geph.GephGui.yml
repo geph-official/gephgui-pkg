@@ -7,6 +7,29 @@ sdk-extensions:
   - org.freedesktop.Sdk.Extension.node14
 command: "gephgui-wry"
 modules:
+  # - shared-modules/intltool/intltool-0.51.json
+  - shared-modules/dbus-glib/dbus-glib-0.110.json
+  - shared-modules/libappindicator/libappindicator-gtk3-12.10.json
+  - name: geph4-vpn-helper
+    buildsystem: "simple"
+    build-commands:
+      - "git checkout `(cd ../geph4-vpn-helper && git log --format='%H' -n 1)`"
+      - "cargo build --release"
+      - "install -D ./target/release/geph4-vpn-helper -t /app/bin"
+    sources:
+      - type: git
+        url: "https://github.com/geph-official/geph4-vpn-helper.git"
+  - name: gephgui-wry
+    buildsystem: "simple"
+    build-commands:
+      - "git submodule update --init --recursive"
+      - "git checkout `(cd ../gephgui-wry && git log --format='%H' -n 1)`"
+      - "(cd gephgui && npm ci && npm run build)"
+      - "env CARGO_HOME=/run/build/gephgui-wry/cargo cargo build --release"
+      - "install -D ./target/release/gephgui-wry -t /app/bin"
+    sources:
+      - type: git
+        url: "https://github.com/geph-official/gephgui-wry.git"
   - name: blobs
     buildsystem: "simple"
     build-commands:
@@ -32,31 +55,8 @@ modules:
       # - "xdg-icon-resource install --size 256 io.geph.GephGui.png"
       - "mkdir -p /app/share/icons/hicolor/512x512"
       - "mkdir -p /app/share/applications"
-      - "cp io.Geph.GephGui.png /app/share/icons/hicolor/512x512"
-      - "cp io.Geph.GephGui.desktop /app/share/applications"
-  - shared-modules/intltool/intltool-0.51.json
-  - shared-modules/dbus-glib/dbus-glib-0.110.json
-  - shared-modules/libappindicator/libappindicator-gtk3-12.10.json
-  - name: geph4-vpn-helper
-    buildsystem: "simple"
-    build-commands:
-      - "git checkout `(cd ../geph4-vpn-helper && git log --format='%H' -n 1)`"
-      - "cargo build --release"
-      - "install -D ./target/release/geph4-vpn-helper -t /app/bin"
-    sources:
-      - type: git
-        url: "https://github.com/geph-official/geph4-vpn-helper.git"
-  - name: gephgui-wry
-    buildsystem: "simple"
-    build-commands:
-      - "git submodule update --init --recursive"
-      - "git checkout `(cd ../gephgui-wry && git log --format='%H' -n 1)`"
-      - "(cd gephgui && npm ci && npm run build)"
-      - "env CARGO_HOME=/run/build/gephgui-wry/cargo cargo build --release"
-      - "install -D ./target/release/gephgui-wry -t /app/bin"
-    sources:
-      - type: git
-        url: "https://github.com/geph-official/gephgui-wry.git"
+      - "cp io.geph.GephGui.png /app/share/icons/hicolor/512x512"
+      - "cp io.geph.GephGui.desktop /app/share/applications"
 build-options:
   append-path: "/usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/node14/bin"
   build-args:
