@@ -64,6 +64,9 @@ workflows:
       - build_appimage:
           context:
             - master
+      - build_flatpak:
+          context:
+            - master
       - build_windows:
           context:
             - master
