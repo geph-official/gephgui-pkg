@@ -1,30 +1,12 @@
 app-id: io.geph.GephGui
 runtime: org.gnome.Platform
-runtime-version: "40"
+runtime-version: "41"
 sdk: org.gnome.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.rust-stable
   - org.freedesktop.Sdk.Extension.node14
 command: "gephgui-wry"
 modules:
-  - name: gephgui-wry
-    buildsystem: "simple"
-    build-commands:
-      - "git submodule update --init --recursive"
-      - "(cd gephgui && npm ci && npm run build)"
-      - "env CARGO_HOME=/run/build/gephgui-wry/cargo cargo build --release"
-      - "install -D ./target/release/gephgui-wry -t /app/bin"
-    sources:
-      - type: dir
-        path: "../gephgui-wry"
-  - name: geph4-vpn-helper
-    buildsystem: "simple"
-    build-commands:
-      - "cargo build --release"
-      - "install -D ./target/release/geph4-vpn-helper -t /app/bin"
-    sources:
-      - type: dir
-        path: "../geph4-vpn-helper"
   - name: blobs
     buildsystem: "simple"
     build-commands:
@@ -35,6 +17,46 @@ modules:
     sources:
       - type: dir
         path: "../blobs/linux-x64"
+  - name: icons
+    buildsystem: "simple"
+    sources:
+      - type: dir
+        path: "../flatpak/icons"
+    build-commands:
+      # - "xdg-icon-resource install --size 16 io.geph.GephGui.png"
+      # - "xdg-icon-resource install --size 22 io.geph.GephGui.png"
+      # - "xdg-icon-resource install --size 32 io.geph.GephGui.png"
+      # - "xdg-icon-resource install --size 48 io.geph.GephGui.png"
+      # - "xdg-icon-resource install --size 64 io.geph.GephGui.png"
+      # - "xdg-icon-resource install --size 128 io.geph.GephGui.png"
+      # - "xdg-icon-resource install --size 256 io.geph.GephGui.png"
+      - "mkdir -p /app/share/icons/hicolor/512x512"
+      - "mkdir -p /app/share/applications"
+      - "cp io.Geph.GephGui.png /app/share/icons/hicolor/512x512"
+      - "cp io.Geph.GephGui.desktop /app/share/applications"
+  - shared-modules/intltool/intltool-0.51.json
+  - shared-modules/dbus-glib/dbus-glib-0.110.json
+  - shared-modules/libappindicator/libappindicator-gtk3-12.10.json
+  - name: geph4-vpn-helper
+    buildsystem: "simple"
+    build-commands:
+      - "git checkout `(cd ../geph4-vpn-helper && git log --format='%H' -n 1)`"
+      - "cargo build --release"
+      - "install -D ./target/release/geph4-vpn-helper -t /app/bin"
+    sources:
+      - type: git
+        url: "https://github.com/geph-official/geph4-vpn-helper.git"
+  - name: gephgui-wry
+    buildsystem: "simple"
+    build-commands:
+      - "git submodule update --init --recursive"
+      - "git checkout `(cd ../gephgui-wry && git log --format='%H' -n 1)`"
+      - "(cd gephgui && npm ci && npm run build)"
+      - "env CARGO_HOME=/run/build/gephgui-wry/cargo cargo build --release"
+      - "install -D ./target/release/gephgui-wry -t /app/bin"
+    sources:
+      - type: git
+        url: "https://github.com/geph-official/gephgui-wry.git"
 build-options:
   append-path: "/usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/node14/bin"
   build-args:

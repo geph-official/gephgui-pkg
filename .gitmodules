@@ -4,3 +4,6 @@
 [submodule "geph4-vpn-helper"]
 	path = geph4-vpn-helper
 	url = https://github.com/geph-official/geph4-vpn-helper.git
+[submodule "flatpak/shared-modules"]
+	path = flatpak/shared-modules
+	url = https://github.com/flathub/shared-modules.git
