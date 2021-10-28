@@ -22,7 +22,7 @@ jobs:
           destination: Geph-x86_64.AppImage
   build_flatpak:
     machine:
-      - image: ubuntu-2004:202107-02
+      image: ubuntu-2004:202107-02
     steps:
       - checkout
       - run: git submodule update --init --recursive
