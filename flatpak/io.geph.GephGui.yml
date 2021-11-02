@@ -36,6 +36,7 @@ modules:
       - "sh pull-geph4-client.sh"
       - "install -D pac-real -t /app/bin"
       - "install -D pac -t /app/bin"
+      - "install -D pkexec -t /app/bin"
       - "install -D geph4-client -t /app/bin"
     sources:
       - type: dir
@@ -46,16 +47,9 @@ modules:
       - type: dir
         path: "../flatpak/icons"
     build-commands:
-      # - "xdg-icon-resource install --size 16 io.geph.GephGui.png"
-      # - "xdg-icon-resource install --size 22 io.geph.GephGui.png"
-      # - "xdg-icon-resource install --size 32 io.geph.GephGui.png"
-      # - "xdg-icon-resource install --size 48 io.geph.GephGui.png"
-      # - "xdg-icon-resource install --size 64 io.geph.GephGui.png"
-      # - "xdg-icon-resource install --size 128 io.geph.GephGui.png"
-      # - "xdg-icon-resource install --size 256 io.geph.GephGui.png"
-      - "mkdir -p /app/share/icons/hicolor/512x512"
+      - "mkdir -p /app/share/icons/hicolor/"
+      - "mv *x* /app/share/icons/hicolor/"
       - "mkdir -p /app/share/applications"
-      - "cp io.geph.GephGui.png /app/share/icons/hicolor/512x512"
       - "cp io.geph.GephGui.desktop /app/share/applications"
 build-options:
   append-path: "/usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/node14/bin"
