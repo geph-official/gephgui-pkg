@@ -48,7 +48,7 @@ modules:
         path: "../flatpak/icons"
     build-commands:
       - "mkdir -p /app/share/icons/hicolor/"
-      - "mv *x* /app/share/icons/hicolor/"
+      - "mv apps /app/share/icons/hicolor/"
       - "mkdir -p /app/share/applications"
       - "cp io.geph.GephGui.desktop /app/share/applications"
 build-options:
