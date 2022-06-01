@@ -1,0 +1,9 @@
+#!/bin/bash
+cd "$(dirname "$(readlink -f "$0")")"
+pwd
+if [ "$(stat -f "%u" pac-real)" != "0" ]
+then
+	echo "we must elevate privs"
+	./cocoasudo ./pac-real setuid
+fi
+./pac-real $@

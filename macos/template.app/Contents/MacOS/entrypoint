@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# first enter the right directory
+cd "$(dirname "$0")"
+# then add current directory to PATH
+export PATH=./bin:$PATH
+# run gephgui-wry
+gephgui-wry
