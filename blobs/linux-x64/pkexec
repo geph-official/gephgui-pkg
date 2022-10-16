@@ -1,8 +1,7 @@
 #!/bin/bash
 
 mkdir -p ~/.geph-blobs
-cp $(which geph4-vpn-helper) ~/.geph-blobs
 cp $(which geph4-client) ~/.geph-blobs
 export PATH=$PATH:~/.geph-blobs
 echo $@
-flatpak-spawn --host pkexec ~/.geph-blobs/geph4-vpn-helper ~/.geph-blobs/geph4-client ${@: 3}
+flatpak-spawn --host pkexec ~/.geph-blobs/geph4-client ${@: 3}
