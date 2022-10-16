@@ -5,21 +5,21 @@ orbs:
   win: circleci/windows@2.2.0 # The Windows orb give you everything you need to start using the Windows executor.
 
 jobs:
-  build_appimage:
-    docker:
-      - image: cimg/node:14.9.0
-    steps:
-      - checkout
-      - run: sudo apt update
-      - run: sudo apt install fuse
-      - run: git submodule update --init --recursive
-      - run: curl https://sh.rustup.rs -sSf | sh -s -- -y
-      - run: echo 'export PATH=$HOME/.cargo/bin:$PATH' >> $BASH_ENV
-      - run: (cd gephgui-wry/gephgui && npm i && CI= npm run build)
-      - run: (cd appimage && bash build-appimage.bash)
-      - store_artifacts:
-          path: appimage/Geph/Geph-x86_64.AppImage
-          destination: Geph-x86_64.AppImage
+  # build_appimage:
+  #   docker:
+  #     - image: cimg/node:14.9.0
+  #   steps:
+  #     - checkout
+  #     - run: sudo apt update
+  #     - run: sudo apt install fuse
+  #     - run: git submodule update --init --recursive
+  #     - run: curl https://sh.rustup.rs -sSf | sh -s -- -y
+  #     - run: echo 'export PATH=$HOME/.cargo/bin:$PATH' >> $BASH_ENV
+  #     - run: (cd gephgui-wry/gephgui && npm i && CI= npm run build)
+  #     - run: (cd appimage && bash build-appimage.bash)
+  #     - store_artifacts:
+  #         path: appimage/Geph/Geph-x86_64.AppImage
+  #         destination: Geph-x86_64.AppImage
   build_flatpak:
     machine:
       image: ubuntu-2004:202107-02
