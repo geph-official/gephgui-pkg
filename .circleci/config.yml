@@ -5,7 +5,7 @@ orbs:
   win: circleci/windows@2.2.0 # The Windows orb give you everything you need to start using the Windows executor.
 
 jobs:
-  build_osx:
+  build_macos:
     working_directory: ~/repo/
     macos:
       xcode: 12.5.1
