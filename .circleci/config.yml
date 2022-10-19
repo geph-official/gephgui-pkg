@@ -5,6 +5,20 @@ orbs:
   win: circleci/windows@2.2.0 # The Windows orb give you everything you need to start using the Windows executor.
 
 jobs:
+  build_osx:
+    working_directory: ~/repo/
+    macos:
+      xcode: 12.5.1
+    resource_class: macos.x86.medium.gen2
+    steps:
+      - checkout
+      - run: git submodule update --init --recursive
+      - run: curl https://sh.rustup.rs -sSf | sh -s -- -y
+      - run: (cd gephgui-wry/gephgui && npm i && CI= npm run build)
+      - run: (cd macos && ./build-macos.bash)
+      - store_artifacts:
+          path: macos/geph-macos.dmg
+          destination: geph-macos.dmg
   # build_appimage:
   #   docker:
   #     - image: cimg/node:14.9.0
@@ -68,5 +82,8 @@ workflows:
           context:
             - master
       - build_windows:
+          context:
+            - master
+      - build_macos:
           context:
             - master
