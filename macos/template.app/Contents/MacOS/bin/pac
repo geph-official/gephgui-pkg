@@ -1,5 +1,7 @@
 #!/bin/bash
-cd "$(dirname "$(readlink -f "$0")")"
+readlinkf(){ perl -MCwd -e 'print Cwd::abs_path shift' "$1";}
+
+cd "$(dirname "$(readlinkf "$0")")"
 pwd
 if [ "$(stat -f "%u" pac-real)" != "0" ]
 then
