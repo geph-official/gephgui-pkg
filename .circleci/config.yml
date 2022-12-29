@@ -8,7 +8,7 @@ jobs:
   build_macos:
     working_directory: ~/repo/
     macos:
-      xcode: 12.5.1
+      xcode: 11.7.0
     resource_class: macos.x86.medium.gen2
     steps:
       - checkout
