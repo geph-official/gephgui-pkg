@@ -52,7 +52,7 @@ Name: "{group}\{cm:UninstallProgram,{cm:MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\{cm:MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\VC_redist.x86"; StatusMsg: "Installing VC redist..."; Parameters: "/install";
+Filename: "{app}\VC_redist.x86"; StatusMsg: "Installing VC redist..."; Parameters: "/Q";
 Filename: "{app}\MicrosoftEdgeWebview2Setup"; StatusMsg: "Installing WebView2..."; Parameters: "/install"; Check: WebView2IsNotInstalled
 
 
