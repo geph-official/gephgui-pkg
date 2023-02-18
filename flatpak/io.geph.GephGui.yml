@@ -15,7 +15,7 @@ modules:
     build-commands:
       - "git submodule update --init --recursive"
       - "git checkout `(cd ../gephgui-wry && git log --format='%H' -n 1)`"
-      - "(cd gephgui && npm i && npm run build)"
+      - "(cd gephgui && npm i -f && npm run build)"
       - "env CARGO_HOME=/run/build/gephgui-wry/cargo cargo build --release --features tray"
       - "install -D ./target/release/gephgui-wry -t /app/bin"
     sources:
