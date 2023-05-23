@@ -1,10 +1,10 @@
 app-id: io.geph.GephGui
 runtime: org.gnome.Platform
-runtime-version: "41"
+runtime-version: "44"
 sdk: org.gnome.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.rust-stable
-  - org.freedesktop.Sdk.Extension.node14
+  - org.freedesktop.Sdk.Extension.node16
 command: "gephgui-wry"
 modules:
   # - shared-modules/intltool/intltool-0.51.json
