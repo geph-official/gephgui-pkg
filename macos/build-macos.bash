@@ -8,4 +8,4 @@ chmod +x build.app/Contents/MacOS/bin/geph4-client
 
 mkdir dist
 mv build.app dist/Geph.app
-ditto -c -k --sequesterRsrc --keepParent ./dist/Geph.app Geph.zip
+ditto -c -k --sequesterRsrc --keepParent ./dist/Geph.app geph-macos.zip
