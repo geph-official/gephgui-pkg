@@ -41,10 +41,11 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Type: filesandordirs; Name: "{app}\*"
 
 [Files]
-;Source: "E:\geph-electron-win32-ia32\geph-electron.exe"; DestDir: "{app}"; Flags: ignoreversion
+; ;Source: "E:\geph-electron-win32-ia32\geph-electron.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\blobs\win-ia32\gephgui-wry.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\blobs\win-ia32\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\blobs\win-drivers\*"; DestDir: "{app}"; Flags: onlyifdoesntexist uninsneveruninstall recursesubdirs createallsubdirs
-; NOTE: Don't use "Flags: ignoreversion" on any shared system files
+; ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
 Name: "{group}\{cm:MyAppName}"; Filename: "{app}\{#MyAppExeName}"
@@ -52,9 +53,10 @@ Name: "{group}\{cm:UninstallProgram,{cm:MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\{cm:MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-
 Filename: "{app}\MicrosoftEdgeWebview2Setup"; StatusMsg: "Installing WebView2..."; Parameters: "/install"; Check: WebView2IsNotInstalled
 
+[Run]
+Filename: "{cmd}"; Parameters: "/C SET GEPH_APP_TYPE=INSTALL_WINDOWS_SERVICE && ""{app}\gephgui-wry.exe"""; Flags: postinstall shellexec
 
 [Code]
 function WebView2IsNotInstalled: Boolean;
