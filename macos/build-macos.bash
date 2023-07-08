@@ -8,4 +8,4 @@ chmod +x build.app/Contents/MacOS/bin/geph4-client
 
 mkdir dist
 mv build.app dist/Geph.app
-./create-dmg --volname Geph --app-drop-link 400 0 geph-macos.dmg ./dist/
+ditto -c -k --sequesterRsrc --keepParent ./dist/Geph.app geph-macos.zip
