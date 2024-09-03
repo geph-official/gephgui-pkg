@@ -21,7 +21,7 @@ jobs:
         run: |
           cd gephgui-wry/gephgui
           npm i -f
-          CI= npm run build
+          npm run build
       - name: Build macOS
         run: |
           cd macos
@@ -80,7 +80,7 @@ jobs:
         run: |
           cd gephgui-wry/gephgui
           npm i -f
-          CI= npm run build
+          npm run build
       - name: Build Windows
         run: |
           $env:PATH += ";C:\Users\runneradmin\.cargo\bin"
