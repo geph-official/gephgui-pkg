@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build_macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: "recursive"
+      - name: Set up Rust
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      - name: Build GUI
+        run: |
+          cd gephgui-wry/gephgui
+          npm i -f
+          CI= npm run build
+      - name: Build macOS
+        run: |
+          cd macos
+          ./build-macos.bash
+      - name: Install and configure B2
+        run: |
+          pip3 install --upgrade b2
+          b2 authorize-account ${{ secrets.B2_KEYID }} ${{ secrets.B2_APPKEY }}
+      - name: Upload to B2
+        run: b2 upload-file geph-dl macos/geph-macos.zip STAGING/geph-macos.zip
+      - uses: actions/upload-artifact@v3
+        with:
+          name: geph-macos
+          path: macos/geph-macos.zip
+
+  build_flatpak:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: "recursive"
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install flatpak-builder flatpak ca-certificates python3-pip
+      - name: Set up Flatpak
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+      - name: Build Flatpak
+        run: |
+          flatpak-builder --force-clean --install-deps-from flathub --user build-dir flatpak/io.geph.GephGui.yml --repo=repo
+          flatpak build-bundle repo io.geph.GephGui.flatpak io.geph.GephGui --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
+      - name: Install and configure B2
+        run: |
+          sudo pip3 install --upgrade b2
+          b2 authorize-account ${{ secrets.B2_KEYID }} ${{ secrets.B2_APPKEY }}
+      - name: Upload to B2
+        run: b2 upload-file geph-dl io.geph.GephGui.flatpak STAGING/Geph-x86_64.flatpak
+      - uses: actions/upload-artifact@v3
+        with:
+          name: geph-flatpak
+          path: io.geph.GephGui.flatpak
+
+  build_windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: "recursive"
+      - name: Set up Rust
+        run: |
+          curl https://win.rustup.rs/ -o rustup-init.exe
+          ./rustup-init -y --default-toolchain "stable-i686-pc-windows-msvc" --profile minimal
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      - name: Build GUI
+        run: |
+          cd gephgui-wry/gephgui
+          npm i -f
+          CI= npm run build
+      - name: Build Windows
+        run: |
+          $env:PATH += ";C:\Users\runneradmin\.cargo\bin"
+          $env:CARGO_NET_GIT_FETCH_WITH_CLI = "true"
+          bash windows/build-windows.bash
+      - name: Install and configure B2
+        run: |
+          pip install --upgrade b2
+          b2 authorize-account ${{ secrets.B2_KEYID }} ${{ secrets.B2_APPKEY }}
+      - name: Upload to B2
+        run: b2 upload-file geph-dl windows/Output/geph-windows-setup.exe STAGING/geph-windows-setup.exe
+      - uses: actions/upload-artifact@v3
+        with:
+          name: geph-windows
+          path: windows/Output/geph-windows-setup.exe
