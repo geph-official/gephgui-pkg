@@ -26,12 +26,18 @@ jobs:
         run: |
           cd macos
           ./build-macos.bash
-      - name: Install and configure B2
+      - name: Install rclone
         run: |
-          pip3 install --upgrade b2 --break-system-packages
-          b2 authorize-account ${{ secrets.B2_KEYID }} ${{ secrets.B2_APPKEY }}
+          brew install rclone
+      - name: Configure rclone
+        run: |
+          mkdir -p ~/.config/rclone
+          echo "[b2]" > ~/.config/rclone/rclone.conf
+          echo "type = b2" >> ~/.config/rclone/rclone.conf
+          echo "account = ${{ secrets.B2_KEYID }}" >> ~/.config/rclone/rclone.conf
+          echo "key = ${{ secrets.B2_APPKEY }}" >> ~/.config/rclone/rclone.conf
       - name: Upload to B2
-        run: b2 upload-file geph-dl macos/geph-macos.zip STAGING/geph-macos.zip
+        run: rclone copy macos/geph-macos.zip b2:geph-dl/STAGING/geph-macos.zip
       - uses: actions/upload-artifact@v3
         with:
           name: geph-macos
@@ -46,7 +52,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install flatpak-builder flatpak ca-certificates python3-pip
+          sudo apt install flatpak-builder flatpak ca-certificates
       - name: Set up Flatpak
         run: |
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
@@ -54,12 +60,18 @@ jobs:
         run: |
           flatpak-builder --force-clean --install-deps-from flathub --user build-dir flatpak/io.geph.GephGui.yml --repo=repo
           flatpak build-bundle repo io.geph.GephGui.flatpak io.geph.GephGui --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
-      - name: Install and configure B2
+      - name: Install rclone
         run: |
-          sudo pip3 install --upgrade b2 --break-system-packages
-          b2 authorize-account ${{ secrets.B2_KEYID }} ${{ secrets.B2_APPKEY }}
+          sudo -v ; curl https://rclone.org/install.sh | sudo bash
+      - name: Configure rclone
+        run: |
+          mkdir -p ~/.config/rclone
+          echo "[b2]" > ~/.config/rclone/rclone.conf
+          echo "type = b2" >> ~/.config/rclone/rclone.conf
+          echo "account = ${{ secrets.B2_KEYID }}" >> ~/.config/rclone/rclone.conf
+          echo "key = ${{ secrets.B2_APPKEY }}" >> ~/.config/rclone/rclone.conf
       - name: Upload to B2
-        run: b2 upload-file geph-dl io.geph.GephGui.flatpak STAGING/Geph-x86_64.flatpak
+        run: rclone copy io.geph.GephGui.flatpak b2:geph-dl/STAGING/Geph-x86_64.flatpak
       - uses: actions/upload-artifact@v3
         with:
           name: geph-flatpak
@@ -86,12 +98,22 @@ jobs:
           $env:PATH += ";C:\Users\runneradmin\.cargo\bin"
           $env:CARGO_NET_GIT_FETCH_WITH_CLI = "true"
           bash windows/build-windows.bash
-      - name: Install and configure B2
+      - name: Install rclone
         run: |
-          pip install --upgrade b2
-          b2 authorize-account ${{ secrets.B2_KEYID }} ${{ secrets.B2_APPKEY }}
+          Invoke-WebRequest https://downloads.rclone.org/rclone-current-windows-amd64.zip -OutFile rclone.zip
+          Expand-Archive rclone.zip -DestinationPath .
+          Move-Item rclone-*-windows-amd64/rclone.exe .
+      - name: Configure rclone
+        run: |
+          New-Item -ItemType Directory -Force -Path $env:USERPROFILE\.config\rclone
+          @"
+          [b2]
+          type = b2
+          account = ${{ secrets.B2_KEYID }}
+          key = ${{ secrets.B2_APPKEY }}
+          "@ | Out-File -FilePath $env:USERPROFILE\.config\rclone\rclone.conf -Encoding ASCII
       - name: Upload to B2
-        run: b2 upload-file geph-dl windows/Output/geph-windows-setup.exe STAGING/geph-windows-setup.exe
+        run: .\rclone.exe copy windows/Output/geph-windows-setup.exe b2:geph-dl/STAGING/geph-windows-setup.exe
       - uses: actions/upload-artifact@v3
         with:
           name: geph-windows
