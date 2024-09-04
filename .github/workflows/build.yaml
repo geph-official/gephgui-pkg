@@ -41,7 +41,7 @@ jobs:
           cd macos
           ./build-macos.bash
       - name: Upload to B2
-        run: rclone copy macos/geph-macos.zip b2:geph-dl/STAGING/geph-macos.zip
+        run: rclone copyto macos/geph-macos.zip b2:geph-dl/STAGING/geph-macos.zip
       - uses: actions/upload-artifact@v3
         with:
           name: geph-macos
@@ -76,7 +76,7 @@ jobs:
           echo "account = ${{ secrets.B2_KEYID }}" >> ~/.config/rclone/rclone.conf
           echo "key = ${{ secrets.B2_APPKEY }}" >> ~/.config/rclone/rclone.conf
       - name: Upload to B2
-        run: rclone copy io.geph.GephGui.flatpak b2:geph-dl/STAGING/Geph-x86_64.flatpak
+        run: rclone copyto io.geph.GephGui.flatpak b2:geph-dl/STAGING/Geph-x86_64.flatpak
       - uses: actions/upload-artifact@v3
         with:
           name: geph-flatpak
@@ -118,7 +118,7 @@ jobs:
           key = ${{ secrets.B2_APPKEY }}
           "@ | Out-File -FilePath $env:USERPROFILE\.config\rclone\rclone.conf -Encoding ASCII
       - name: Upload to B2
-        run: .\rclone.exe copy windows/Output/geph-windows-setup.exe b2:geph-dl/STAGING/geph-windows-setup.exe
+        run: .\rclone.exe copyto windows/Output/geph-windows-setup.exe b2:geph-dl/STAGING/geph-windows-setup.exe
       - uses: actions/upload-artifact@v3
         with:
           name: geph-windows
