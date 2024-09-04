@@ -28,7 +28,7 @@ jobs:
           ./build-macos.bash
       - name: Install and configure B2
         run: |
-          pip3 install --upgrade b2
+          pip3 install --upgrade b2 --break-system-packages
           b2 authorize-account ${{ secrets.B2_KEYID }} ${{ secrets.B2_APPKEY }}
       - name: Upload to B2
         run: b2 upload-file geph-dl macos/geph-macos.zip STAGING/geph-macos.zip
@@ -56,7 +56,7 @@ jobs:
           flatpak build-bundle repo io.geph.GephGui.flatpak io.geph.GephGui --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
       - name: Install and configure B2
         run: |
-          sudo pip3 install --upgrade b2
+          sudo pip3 install --upgrade b2 --break-system-packages
           b2 authorize-account ${{ secrets.B2_KEYID }} ${{ secrets.B2_APPKEY }}
       - name: Upload to B2
         run: b2 upload-file geph-dl io.geph.GephGui.flatpak STAGING/Geph-x86_64.flatpak
