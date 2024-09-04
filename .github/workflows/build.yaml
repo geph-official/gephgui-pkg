@@ -36,6 +36,8 @@ jobs:
           echo "type = b2" >> ~/.config/rclone/rclone.conf
           echo "account = ${{ secrets.B2_KEYID }}" >> ~/.config/rclone/rclone.conf
           echo "key = ${{ secrets.B2_APPKEY }}" >> ~/.config/rclone/rclone.conf
+      - name: Cat rclone
+        run: cat ~/.config/rclone/rclone.conf
       - name: Upload to B2
         run: rclone copy macos/geph-macos.zip b2:geph-dl/STAGING/geph-macos.zip
       - uses: actions/upload-artifact@v3
