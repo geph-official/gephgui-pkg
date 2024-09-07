@@ -31,6 +31,7 @@ jobs:
         run: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          rustup target add x86_64-apple-darwin
       - name: Build GUI
         run: |
           cd gephgui-wry/gephgui
@@ -39,14 +40,13 @@ jobs:
       - name: Build macOS
         run: |
           cd macos
-          ./build-macos.bash
+          CARGO_BUILD_TARGET=x86_64-apple-darwin ./build-macos.bash
       - name: Upload to B2
-        run: rclone copyto macos/geph-macos.zip b2:geph-dl/STAGING/geph-macos.zip
+        run: rclone copyto macos/geph-macos.zip b2:geph-dl/STAGING/geph-macos-x86_64.zip
       - uses: actions/upload-artifact@v3
         with:
-          name: geph-macos
+          name: geph-macos-x86_64
           path: macos/geph-macos.zip
-
   build_flatpak:
     runs-on: ubuntu-20.04
     steps:
