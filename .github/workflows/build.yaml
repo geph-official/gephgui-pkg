@@ -42,10 +42,10 @@ jobs:
           cd macos
           CARGO_BUILD_TARGET=x86_64-apple-darwin ./build-macos.bash
       - name: Upload to B2
-        run: rclone copyto macos/geph-macos.zip b2:geph-dl/STAGING/geph-macos-x86_64.zip
+        run: rclone copyto macos/geph-macos.zip b2:geph-dl/STAGING/geph-macos.zip
       - uses: actions/upload-artifact@v3
         with:
-          name: geph-macos-x86_64
+          name: geph-macos
           path: macos/geph-macos.zip
   build_flatpak:
     runs-on: ubuntu-20.04
