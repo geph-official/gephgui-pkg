@@ -1,15 +1,45 @@
 app-id: io.geph.GephGui
 runtime: org.gnome.Platform
-runtime-version: "41"
+runtime-version: "47"
 sdk: org.gnome.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.rust-stable
-  - org.freedesktop.Sdk.Extension.node14
+  - org.freedesktop.Sdk.Extension.node22
 command: "gephgui-wry"
 modules:
   # - shared-modules/intltool/intltool-0.51.json
-  - shared-modules/dbus-glib/dbus-glib-0.110.json
+  - shared-modules/dbus-glib/dbus-glib.json
   - shared-modules/libappindicator/libappindicator-gtk3-12.10.json
+  - shared-modules/libsoup/libsoup-2.4.json
+
+  - name: unifdef
+    buildsystem: simple
+    build-commands:
+      - "make prefix=/app install"
+    sources:
+      - type: archive
+        url: https://dotat.at/prog/unifdef/unifdef-2.12.tar.xz
+        sha256: 43ce0f02ecdcdc723b2475575563ddb192e988c886d368260bc0a63aee3ac400
+  - name: webkit2gtk
+    buildsystem: cmake-ninja
+    build-options:
+      cflags: -DNDEBUG
+      cxxflags: -DNDEBUG    
+    config-opts:
+      - -DPORT=GTK
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DUSE_LIBBACKTRACE=OFF
+      - -DCMAKE_INSTALL_PREFIX=/app
+      - -DENABLE_INTROSPECTION=OFF
+      - -DENABLE_SPELLCHECK=OFF
+      - -DCMAKE_SKIP_RPATH=ON
+      - -DUSE_GTK4=OFF
+      - -DUSE_SOUP2=ON
+      - -DENABLE_MINIBROWSER=ON
+    sources:
+      - type: archive
+        url: https://webkitgtk.org/releases/webkitgtk-2.46.1.tar.xz
+        sha256: 2a14faac359aff941d0bc4443eb5537e3702bcaf316b0a129e0e65f3ff8eaac0
   - name: gephgui-wry
     buildsystem: "simple"
     build-commands:
@@ -43,7 +73,8 @@ modules:
       - "mkdir -p /app/share/applications"
       - "cp io.geph.GephGui.desktop /app/share/applications"
 build-options:
-  append-path: "/usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/node14/bin"
+  prepend-pkg-config-path: "/app/lib/pkgconfig"
+  append-path: "/usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/node22/bin"
   build-args:
     - --share=network
 finish-args:
