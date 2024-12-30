@@ -8,6 +8,7 @@ cp $(which gephgui-wry) build.app/Contents/MacOS/bin
 echo "Downloading geph4-client for macOS..."
 while true; do
     # Perform the curl request and capture the HTTP status
+    echo "Downloading https://f001.backblazeb2.com/file/geph-dl/geph4-binaries/$(cat ../blobs/linux-x64/VERSION)/geph4-client-macos-universal)"
     HTTP_STATUS=$(curl -w "%{http_code}" -o build.app/Contents/MacOS/bin/geph4-client -s https://f001.backblazeb2.com/file/geph-dl/geph4-binaries/$(cat ../blobs/linux-x64/VERSION)/geph4-client-macos-universal)
 
     if [ "$HTTP_STATUS" -eq 200 ]; then
