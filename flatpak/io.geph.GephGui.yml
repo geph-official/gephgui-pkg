@@ -7,7 +7,6 @@ sdk-extensions:
   - org.freedesktop.Sdk.Extension.node14
 command: "gephgui-wry"
 modules:
-  # - shared-modules/intltool/intltool-0.51.json
   - shared-modules/dbus-glib/dbus-glib-0.110.json
   - shared-modules/libappindicator/libappindicator-gtk3-12.10.json
   - name: gephgui-wry
@@ -28,7 +27,6 @@ modules:
       - "install -D pac-real -t /app/bin"
       - "install -D pac -t /app/bin"
       - "install -D pkexec -t /app/bin"
-      - "install -D geph4-client -t /app/bin"
     sources:
       - type: dir
         path: "../blobs/linux-x64"
