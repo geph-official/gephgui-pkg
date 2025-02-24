@@ -23,7 +23,6 @@ modules:
   - name: blobs
     buildsystem: "simple"
     build-commands:
-      - "sh pull-geph4-client.sh"
       - "install -D pac-real -t /app/bin"
       - "install -D pac -t /app/bin"
       - "install -D pkexec -t /app/bin"
