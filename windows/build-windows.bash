@@ -3,7 +3,7 @@ set -e
 
 cd `dirname "$(readlink -f "$0")"`
 
-export VERSION=$(cat ../blobs/linux-x64/VERSION)
+export VERSION=$(git describe --always)
 
 ISCC="./iscc/ISCC.exe"
 mkdir iscc
