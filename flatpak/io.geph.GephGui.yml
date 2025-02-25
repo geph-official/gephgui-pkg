@@ -12,6 +12,7 @@ modules:
   - name: gephgui-wry
     buildsystem: "simple"
     build-commands:
+      - "git checkout next"
       - "git submodule update --init --recursive"
       - "git checkout `(cd ../gephgui-wry && git log --format='%H' -n 1)`"
       - "(cd gephgui && npm i -f && npm run build)"
@@ -25,7 +26,7 @@ modules:
     build-commands:
       - "install -D pac-real -t /app/bin"
       - "install -D pac -t /app/bin"
-      - "install -D pkexec -t /app/bin"
+      - "install -D pkexec -t /app/bin" 
     sources:
       - type: dir
         path: "../blobs/linux-x64"
