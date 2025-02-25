@@ -20,7 +20,7 @@ modules:
     sources:
       - type: git
         url: "https://github.com/geph-official/gephgui-wry.git"
-        branch: next
+        branch: new
   - name: blobs
     buildsystem: "simple"
     build-commands:
