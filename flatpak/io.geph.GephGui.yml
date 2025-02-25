@@ -41,7 +41,7 @@ modules:
       - "mkdir -p /app/share/applications"
       - "cp io.geph.GephGui.desktop /app/share/applications"
 build-options:
-  append-path: "/usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/node14/bin"
+  append-path: "/usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/node22/bin"
   build-args:
     - --share=network
 finish-args:
