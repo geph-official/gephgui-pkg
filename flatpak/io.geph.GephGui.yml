@@ -12,7 +12,6 @@ modules:
   - name: gephgui-wry
     buildsystem: "simple"
     build-commands:
-      - "git checkout origin/next"
       - "git submodule update --init --recursive"
       - "git checkout `(cd ../gephgui-wry && git log --format='%H' -n 1)`"
       - "(cd gephgui && npm i -f && npm run build)"
@@ -21,6 +20,7 @@ modules:
     sources:
       - type: git
         url: "https://github.com/geph-official/gephgui-wry.git"
+        branch: next
   - name: blobs
     buildsystem: "simple"
     build-commands:
