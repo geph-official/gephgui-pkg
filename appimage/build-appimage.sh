@@ -2,6 +2,7 @@
 
 set -e
 
+
 # Create a temporary directory for building the AppImage
 BUILD_DIR=$(mktemp -d)
 APP_DIR="$BUILD_DIR/GephGui.AppDir"
@@ -48,5 +49,5 @@ ARCH=x86_64 ./appimagetool "$APP_DIR" GephGui-x86_64.AppImage
 echo "AppImage created: GephGui-x86_64.AppImage"
 
 # Clean up
-#rm -rf "$BUILD_DIR"
-#rm appimagetool
+rm -rf "$BUILD_DIR"
+rm appimagetool

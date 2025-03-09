@@ -123,3 +123,43 @@ jobs:
         with:
           name: geph-windows
           path: windows/Output/geph-windows-setup.exe
+
+  build_appimage:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:18.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: "recursive"
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y curl wget git build-essential nodejs npm libssl-dev libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: Set up Rust
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          export PATH="$HOME/.cargo/bin:$PATH"
+          rustup default stable
+      - name: Build AppImage
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          chmod +x ./appimage/build-appimage.sh
+          ./appimage/build-appimage.sh
+      - name: Install rclone
+        run: |
+          curl https://rclone.org/install.sh | bash
+      - name: Configure rclone
+        run: |
+          mkdir -p ~/.config/rclone
+          echo "[b2]" > ~/.config/rclone/rclone.conf
+          echo "type = b2" >> ~/.config/rclone/rclone.conf
+          echo "account = ${{ secrets.B2_KEYID }}" >> ~/.config/rclone/rclone.conf
+          echo "key = ${{ secrets.B2_APPKEY }}" >> ~/.config/rclone/rclone.conf
+      - name: Upload to B2
+        run: rclone copyto GephGui-x86_64.AppImage b2:geph-dl/NEXT/GephGui-x86_64.AppImage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: geph-appimage
+          path: GephGui-x86_64.AppImage
