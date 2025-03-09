@@ -27,6 +27,7 @@ docker run --rm --network=host \
     && . /root/.cargo/env \
     && cargo build --release"
 
+cd ..
 
 # Copy the built binary and necessary files
 echo "Copying files..."
