@@ -140,6 +140,7 @@ jobs:
           cargo --version
       - name: Build AppImage
         run: |
+          sudo apt-get install libwebkit2gtk-4.1-dev
           export PATH="$HOME/.cargo/bin:$PATH"
           chmod +x ./appimage/build-appimage.sh
           ./appimage/build-appimage.sh
