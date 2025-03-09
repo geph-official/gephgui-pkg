@@ -142,7 +142,7 @@ jobs:
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
           chmod +x ./appimage/build-appimage.sh
-          cd appimage && ./build-appimage.sh
+          ./appimage/build-appimage.sh
       - name: Install rclone
         run: |
           curl https://rclone.org/install.sh | bash
