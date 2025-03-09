@@ -2,7 +2,6 @@
 
 set -e
 
-
 # Create a temporary directory for building the AppImage
 BUILD_DIR=$(mktemp -d)
 APP_DIR="$BUILD_DIR/GephGui.AppDir"
@@ -16,8 +15,18 @@ echo "Building Geph GUI..."
 cd gephgui-wry
 git submodule update --init --recursive
 (cd gephgui && npm ci && npm run build)
-cargo build --release
-cd ..
+
+# Run cargo build in Ubuntu 18.04 Docker container
+docker run --rm --network=host \
+  -v "$(pwd)":/app \
+  -w /app \
+  ubuntu:22.04 \
+  bash -c "apt-get update \
+    && apt-get install -y build-essential pkg-config libssl-dev curl libwebkit2gtk-4.1-dev \
+    && curl https://sh.rustup.rs -sSf | sh -s -- -y \
+    && . /root/.cargo/env \
+    && cargo build --release"
+
 
 # Copy the built binary and necessary files
 echo "Copying files..."
@@ -32,7 +41,7 @@ cp flatpak/icons/io.geph.GephGui.desktop "$APP_DIR/io.geph.GephGui.desktop"
 # Create the AppRun file
 cat <<EOF > "$APP_DIR/AppRun"
 #!/bin/bash
-export PATH="\$APPDIR/usr/bin/":$PATH
+export PATH="\$APPDIR/usr/bin/":\$PATH
 exec gephgui-wry "\$@"
 EOF
 
