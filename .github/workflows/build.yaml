@@ -155,8 +155,8 @@ jobs:
           echo "account = ${{ secrets.B2_KEYID }}" >> ~/.config/rclone/rclone.conf
           echo "key = ${{ secrets.B2_APPKEY }}" >> ~/.config/rclone/rclone.conf
       - name: Upload to B2
-        run: rclone copyto appimage/GephGui-x86_64.AppImage b2:geph-dl/NEXT/GephGui-x86_64.AppImage
+        run: rclone copyto GephGui-x86_64.AppImage b2:geph-dl/NEXT/GephGui-x86_64.AppImage
       - uses: actions/upload-artifact@v4
         with:
           name: geph-appimage
-          path: appimage/GephGui-x86_64.AppImage
+          path: GephGui-x86_64.AppImage
