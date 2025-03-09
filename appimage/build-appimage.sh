@@ -39,11 +39,41 @@ cp flatpak/icons/256x256/apps/io.geph.GephGui.png "$APP_DIR/usr/share/icons/hico
 cp flatpak/icons/256x256/apps/io.geph.GephGui.png "$APP_DIR/io.geph.GephGui.png"
 cp flatpak/icons/io.geph.GephGui.desktop "$APP_DIR/io.geph.GephGui.desktop"
 
+# Copy WebKit2GTK library
+echo "Copying WebKit2GTK library..."
+if [ -f "/lib/x86_64-linux-gnu/libwebkit2gtk-4.1.so.0" ]; then
+  mkdir -p "$APP_DIR/lib/x86_64-linux-gnu/"
+  cp "/lib/x86_64-linux-gnu/libwebkit2gtk-4.1.so.0" "$APP_DIR/lib/x86_64-linux-gnu/"
+  # Copy dependencies if needed (you might need to add more as required)
+  # Use ldd to identify dependencies
+  echo "Copying dependencies for WebKit2GTK..."
+  ldd /lib/x86_64-linux-gnu/libwebkit2gtk-4.1.so.0 | grep "=> /" | awk '{print $3}' | xargs -I '{}' cp -v '{}' "$APP_DIR/lib/x86_64-linux-gnu/" || true
+else
+  echo "Warning: libwebkit2gtk-4.1.so.0 not found in /lib/x86_64-linux-gnu/"
+  # Try to find it elsewhere
+  WEBKIT_LIB=$(find /usr -name "libwebkit2gtk-4.1.so.0" 2>/dev/null | head -n 1)
+  if [ -n "$WEBKIT_LIB" ]; then
+    echo "Found WebKit2GTK at $WEBKIT_LIB"
+    WEBKIT_DIR=$(dirname "$WEBKIT_LIB")
+    mkdir -p "$APP_DIR/$(dirname $WEBKIT_DIR)"
+    cp "$WEBKIT_LIB" "$APP_DIR/$WEBKIT_DIR/"
+    # Copy dependencies
+    echo "Copying dependencies for WebKit2GTK..."
+    ldd "$WEBKIT_LIB" | grep "=> /" | awk '{print $3}' | xargs -I '{}' cp -v '{}' "$APP_DIR/$WEBKIT_DIR/" || true
+  else
+    echo "Error: Could not find libwebkit2gtk-4.1.so.0 on the system."
+    exit 1
+  fi
+fi
+
 # Create the AppRun file
 cat <<EOF > "$APP_DIR/AppRun"
 #!/bin/bash
-export PATH="\$APPDIR/usr/bin/":\$PATH
-exec gephgui-wry "\$@"
+HERE="\$(dirname "\$(readlink -f "\${0}")")"
+export PATH="\$HERE/usr/bin/:":\$PATH
+# Add library path for WebKit2GTK
+export LD_LIBRARY_PATH="\$HERE/lib/x86_64-linux-gnu/:\$HERE/usr/lib/:\$LD_LIBRARY_PATH"
+exec "\$HERE/usr/bin/gephgui-wry" "\$@"
 EOF
 
 chmod +x "$APP_DIR/AppRun"
