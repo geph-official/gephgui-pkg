@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-
-# Path to the real compiler, e.g. /usr/bin/gcc (adjust as needed)
-REAL_CC="/usr/bin/gcc"
-
-
-# Forward all arguments plus EXTRA_FLAGS to the real compiler
-exec "$REAL_CC" $CFLAGS "$@"

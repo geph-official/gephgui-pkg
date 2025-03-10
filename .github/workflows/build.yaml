@@ -55,6 +55,31 @@ jobs:
           name: geph-flatpak
           path: io.geph.GephGui.flatpak
 
+  build_deb_oldubuntu:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: "recursive"
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y docker.io
+      - name: Build Debian package for old Ubuntu
+        run: |
+          chmod +x debian/build-deb-oldubuntu.sh
+          ./debian/build-deb-oldubuntu.sh
+      - name: Find Debian package
+        id: find-deb
+        run: |
+          DEB_FILE=$(find . -name "*.deb" | head -n 1)
+          echo "DEB_FILE=$DEB_FILE" >> $GITHUB_ENV
+          echo "Found Debian package: $DEB_FILE"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: geph-deb-oldubuntu
+          path: ${{ env.DEB_FILE }}
+
   build_windows:
     runs-on: windows-latest
     steps:
@@ -82,8 +107,8 @@ jobs:
           path: windows/Output/geph-windows-setup.exe
 
   upload_artifacts:
-    runs-on: ubuntu-latest
-    needs: [build_macos, build_flatpak, build_windows]
+    runs-on: ubuntu-24.04
+    needs: [build_macos, build_flatpak, build_windows, build_deb_oldubuntu]
     steps:
       - name: Install rclone
         run: |
@@ -107,3 +132,12 @@ jobs:
         run: rclone copyto ./artifacts/geph-flatpak/io.geph.GephGui.flatpak b2:geph-dl/NEXT/Geph-x86_64.flatpak
       - name: Upload Windows artifact to B2
         run: rclone copyto ./artifacts/geph-windows/geph-windows-setup.exe b2:geph-dl/NEXT/geph-windows-setup.exe
+      - name: Upload Debian package to B2
+        run: |
+          DEB_FILE=$(find ./artifacts/geph-deb-oldubuntu -type f -name "*.deb" | head -n 1)
+          if [ -n "$DEB_FILE" ]; then
+            rclone copyto "$DEB_FILE" b2:geph-dl/NEXT/geph-ubuntu.deb
+          else
+            echo "No Debian package found"
+            exit 1
+          fi
