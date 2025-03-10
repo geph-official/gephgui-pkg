@@ -26,7 +26,7 @@ chmod +x appimagetool
 BUILD_DIR=./AppImageBuild
 APP_DIR="$BUILD_DIR/GephGui.AppDir"
 echo "Building AppImage from $APP_DIR with optimized compression..."
-ARCH=x86_64 ./appimagetool "$APP_DIR" GephGui-x86_64.AppImage
+ARCH=x86_64 sudo ./appimagetool "$APP_DIR" GephGui-x86_64.AppImage
 
 echo "AppImage created: GephGui-x86_64.AppImage"
 
