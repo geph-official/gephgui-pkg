@@ -4,14 +4,13 @@
 set -e
 
 # Script must be run from the root of the repository
-if [ ! -f "VERSION" ]; then
+if [ ! -d "gephgui-wry" ]; then
   echo "Error: This script must be run from the root of the repository."
   exit 1
 fi
 
-
-# Read version from VERSION file
-VERSION=$(cat VERSION)
+# Get version using git describe
+VERSION=$(git describe --always)
 PACKAGE_NAME="gephgui-wry"
 ARCHITECTURE="amd64"
 MAINTAINER="Geph Team <contact@geph.io>"
