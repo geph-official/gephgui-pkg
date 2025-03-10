@@ -13,20 +13,6 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: "recursive"
-      - name: Install rclone
-        run: |
-          brew install rclone
-      - name: Configure rclone
-        run: |
-          mkdir -p ~/.config/rclone
-          echo "[b2]" > ~/.config/rclone/rclone.conf
-          echo "type = b2" >> ~/.config/rclone/rclone.conf
-          echo "account = ${{ secrets.B2_KEYID }}" >> ~/.config/rclone/rclone.conf
-          echo "key = ${{ secrets.B2_APPKEY }}" >> ~/.config/rclone/rclone.conf
-      - name: Test
-        run: cat ~/.config/rclone/rclone.conf
-      - name: Ls
-        run: "rclone ls b2:"
       - name: Set up Rust
         run: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y
@@ -41,8 +27,6 @@ jobs:
         run: |
           cd macos
           CARGO_BUILD_TARGET=x86_64-apple-darwin ./build-macos.bash
-      - name: Upload to B2
-        run: rclone copyto macos/geph-macos.zip b2:geph-dl/NEXT/geph-macos.zip
       - uses: actions/upload-artifact@v4
         with:
           name: geph-macos
@@ -66,18 +50,6 @@ jobs:
         run: |
           flatpak-builder --force-clean --install-deps-from flathub --user build-dir flatpak/io.geph.GephGui.yml --repo=repo
           flatpak build-bundle repo io.geph.GephGui.flatpak io.geph.GephGui --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
-      - name: Install rclone
-        run: |
-          sudo -v ; curl https://rclone.org/install.sh | sudo bash
-      - name: Configure rclone
-        run: |
-          mkdir -p ~/.config/rclone
-          echo "[b2]" > ~/.config/rclone/rclone.conf
-          echo "type = b2" >> ~/.config/rclone/rclone.conf
-          echo "account = ${{ secrets.B2_KEYID }}" >> ~/.config/rclone/rclone.conf
-          echo "key = ${{ secrets.B2_APPKEY }}" >> ~/.config/rclone/rclone.conf
-      - name: Upload to B2
-        run: rclone copyto io.geph.GephGui.flatpak b2:geph-dl/NEXT/Geph-x86_64.flatpak
       - uses: actions/upload-artifact@v4
         with:
           name: geph-flatpak
@@ -104,47 +76,15 @@ jobs:
           $env:PATH += ";C:\Users\runneradmin\.cargo\bin"
           $env:CARGO_NET_GIT_FETCH_WITH_CLI = "true"
           bash windows/build-windows.bash
-      - name: Install rclone
-        run: |
-          Invoke-WebRequest https://downloads.rclone.org/rclone-current-windows-amd64.zip -OutFile rclone.zip
-          Expand-Archive rclone.zip -DestinationPath .
-          Move-Item rclone-*-windows-amd64/rclone.exe .
-      - name: Configure rclone
-        run: |
-          New-Item -ItemType Directory -Force -Path $env:USERPROFILE\.config\rclone
-          @"
-          [b2]
-          type = b2
-          account = ${{ secrets.B2_KEYID }}
-          key = ${{ secrets.B2_APPKEY }}
-          "@ | Out-File -FilePath $env:USERPROFILE\.config\rclone\rclone.conf -Encoding ASCII
-      - name: Upload to B2
-        run: .\rclone.exe copyto windows/Output/geph-windows-setup.exe b2:geph-dl/NEXT/geph-windows-setup.exe
       - uses: actions/upload-artifact@v4
         with:
           name: geph-windows
           path: windows/Output/geph-windows-setup.exe
 
-  build_appimage:
+  upload_artifacts:
     runs-on: ubuntu-latest
+    needs: [build_macos, build_flatpak, build_windows]
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: "recursive"
-      - name: Set up Rust
-        run: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-          export PATH="$HOME/.cargo/bin:$PATH"
-          rustup default stable
-          # Verify installation
-          cargo --version
-      - name: Build AppImage
-        run: |
-          sudo apt-get install libwebkit2gtk-4.1-dev libfuse2
-          export PATH="$HOME/.cargo/bin:$PATH"
-          chmod +x ./appimage/build-appimage.sh
-          ./appimage/build-appimage.sh
       - name: Install rclone
         run: |
           curl https://rclone.org/install.sh | sudo bash
@@ -155,194 +95,15 @@ jobs:
           echo "type = b2" >> ~/.config/rclone/rclone.conf
           echo "account = ${{ secrets.B2_KEYID }}" >> ~/.config/rclone/rclone.conf
           echo "key = ${{ secrets.B2_APPKEY }}" >> ~/.config/rclone/rclone.conf
-      - name: Upload to B2
-        run: rclone copyto GephGui-x86_64.AppImage b2:geph-dl/NEXT/GephGui-x86_64.AppImage
-      - name: Get version from VERSION file
-        run: |
-          APP_VERSION=$(cat VERSION)
-          echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
-      - uses: actions/upload-artifact@v4
-        with:
-          name: geph-appimage
-          path: GephGui-x86_64.AppImage
-      - uses: actions/upload-artifact@v4
-        with:
-          name: geph-version
-          path: VERSION
-
-  build_deb:
-    runs-on: ubuntu-latest
-    needs: build_appimage
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install packaging tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y dpkg-dev debhelper libfuse2
-      - name: Download AppImage artifact
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: geph-appimage
-      - name: Download version information
-        uses: actions/download-artifact@v4
-        with:
-          name: geph-version
-      - name: Get version from VERSION file
-        run: |
-          APP_VERSION=$(cat VERSION)
-          echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
-      - name: Extract AppImage contents
-        run: |
-          chmod +x GephGui-x86_64.AppImage
-          ./GephGui-x86_64.AppImage --appimage-extract
-          ls -la squashfs-root/
-      - name: Build DEB package
-        run: |
-          # Create directory structure for DEB
-          mkdir -p gephgui-deb/DEBIAN
-          mkdir -p gephgui-deb/usr/bin
-          mkdir -p gephgui-deb/usr/share/applications
-          mkdir -p gephgui-deb/usr/share/icons/hicolor/scalable/apps
-          
-          # Create control file
-          cat > gephgui-deb/DEBIAN/control << EOF
-          Package: gephgui
-          Version: ${APP_VERSION}
-          Section: net
-          Priority: optional
-          Architecture: amd64
-          Maintainer: Geph <contact@geph.io>
-          Description: Geph: private and resilient VPN
-           A privacy-first internet tunneling system that helps you freely connect
-           to the global internet without restriction.
-          EOF
-          
-          # Copy files from extracted AppImage
-          cp -r squashfs-root/usr/* gephgui-deb/usr/ || true
-          
-          # Copy AppRun script
-          cp squashfs-root/AppRun gephgui-deb/usr/bin/gephgui
-          chmod +x gephgui-deb/usr/bin/gephgui
-          
-          # Copy desktop file
-          cp squashfs-root/gephgui.desktop gephgui-deb/usr/share/applications/
-          
-          # Copy icon
-          cp squashfs-root/*.svg gephgui-deb/usr/share/icons/hicolor/scalable/apps/ || true
-          cp squashfs-root/*.png gephgui-deb/usr/share/icons/hicolor/scalable/apps/ || true
-          
-          # Build the deb package
-          dpkg-deb --build gephgui-deb
-          mv gephgui-deb.deb gephgui-amd64.deb
-      - name: Install rclone
-        run: |
-          curl https://rclone.org/install.sh | sudo bash
-      - name: Configure rclone
-        run: |
-          mkdir -p ~/.config/rclone
-          echo "[b2]" > ~/.config/rclone/rclone.conf
-          echo "type = b2" >> ~/.config/rclone/rclone.conf
-          echo "account = ${{ secrets.B2_KEYID }}" >> ~/.config/rclone/rclone.conf
-          echo "key = ${{ secrets.B2_APPKEY }}" >> ~/.config/rclone/rclone.conf
-      - name: Upload to B2
-        run: rclone copyto gephgui-amd64.deb b2:geph-dl/NEXT/gephgui-amd64.deb
-      - uses: actions/upload-artifact@v4
-        with:
-          name: geph-deb
-          path: gephgui-amd64.deb
-
-  build_rpm:
-    runs-on: ubuntu-latest
-    needs: build_appimage
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install packaging tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y rpm build-essential libfuse2
-      - name: Download AppImage artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: geph-appimage
-      - name: Download version information
-        uses: actions/download-artifact@v4
-        with:
-          name: geph-version
-      - name: Get version from VERSION file
-        run: |
-          APP_VERSION=$(cat VERSION)
-          echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
-      - name: Extract AppImage contents
-        run: |
-          chmod +x GephGui-x86_64.AppImage
-          ./GephGui-x86_64.AppImage --appimage-extract
-          ls -la squashfs-root/
-      - name: Build RPM package
-        run: |
-          # Set up RPM build environment
-          mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
-          
-          # Create spec file
-          cat > ~/rpmbuild/SPECS/gephgui.spec << EOF
-          Name:           gephgui
-          Version:        ${APP_VERSION}
-          Release:        1%{?dist}
-          Summary:        Geph: private and resilient VPN
-          
-          License:        GPLv3
-          URL:            https://geph.io
-          
-          %description
-          A privacy-first internet tunneling system that helps you freely connect to the global internet without restriction.
-          
-          %prep
-          # No prep needed
-          
-          %build
-          # No build needed
-          
-          %install
-          mkdir -p %{buildroot}/usr/bin
-          mkdir -p %{buildroot}/usr/share/applications
-          mkdir -p %{buildroot}/usr/share/icons/hicolor/scalable/apps
-          
-          cp -r $GITHUB_WORKSPACE/squashfs-root/usr/* %{buildroot}/usr/ || true
-          cp $GITHUB_WORKSPACE/squashfs-root/AppRun %{buildroot}/usr/bin/gephgui
-          chmod +x %{buildroot}/usr/bin/gephgui
-          cp $GITHUB_WORKSPACE/squashfs-root/gephgui.desktop %{buildroot}/usr/share/applications/
-          cp $GITHUB_WORKSPACE/squashfs-root/*.svg %{buildroot}/usr/share/icons/hicolor/scalable/apps/ || true
-          cp $GITHUB_WORKSPACE/squashfs-root/*.png %{buildroot}/usr/share/icons/hicolor/scalable/apps/ || true
-          
-          %files
-          /usr/bin/gephgui
-          /usr/share/applications/gephgui.desktop
-          /usr/share/icons/hicolor/scalable/apps/*
-          /usr/lib/*
-          
-          %changelog
-          * $(date "+%a %b %d %Y") GitHub Actions <actions@github.com> - ${APP_VERSION}-1
-          - Automatic build from AppImage
-          EOF
-          
-          # Build the RPM package
-          rpmbuild -bb ~/rpmbuild/SPECS/gephgui.spec || (cat ~/rpmbuild/SPECS/gephgui.spec && exit 1)
-          
-          # Copy the built RPM to the workspace
-          cp ~/rpmbuild/RPMS/x86_64/gephgui-*.rpm ./gephgui-x86_64.rpm || true
-          cp ~/rpmbuild/RPMS/*/gephgui-*.rpm ./gephgui-x86_64.rpm || true
-      - name: Install rclone
-        run: |
-          curl https://rclone.org/install.sh | sudo bash
-      - name: Configure rclone
-        run: |
-          mkdir -p ~/.config/rclone
-          echo "[b2]" > ~/.config/rclone/rclone.conf
-          echo "type = b2" >> ~/.config/rclone/rclone.conf
-          echo "account = ${{ secrets.B2_KEYID }}" >> ~/.config/rclone/rclone.conf
-          echo "key = ${{ secrets.B2_APPKEY }}" >> ~/.config/rclone/rclone.conf
-      - name: Upload to B2
-        run: rclone copyto gephgui-x86_64.rpm b2:geph-dl/NEXT/gephgui-x86_64.rpm
-      - uses: actions/upload-artifact@v4
-        with:
-          name: geph-rpm
-          path: gephgui-x86_64.rpm
+          path: ./artifacts
+      - name: List downloaded artifacts
+        run: find ./artifacts -type f | sort
+      - name: Upload macOS artifact to B2
+        run: rclone copyto ./artifacts/geph-macos/geph-macos.zip b2:geph-dl/NEXT/geph-macos.zip
+      - name: Upload Flatpak artifact to B2
+        run: rclone copyto ./artifacts/geph-flatpak/io.geph.GephGui.flatpak b2:geph-dl/NEXT/Geph-x86_64.flatpak
+      - name: Upload Windows artifact to B2
+        run: rclone copyto ./artifacts/geph-windows/geph-windows-setup.exe b2:geph-dl/NEXT/geph-windows-setup.exe
