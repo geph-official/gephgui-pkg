@@ -61,10 +61,6 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: "recursive"
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y docker.io
       - name: Build Debian package for old Ubuntu
         run: |
           chmod +x debian/build-deb-oldubuntu.sh
