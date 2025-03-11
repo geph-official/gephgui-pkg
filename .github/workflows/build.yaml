@@ -168,4 +168,4 @@ jobs:
             ./artifacts/geph-flatpak/io.geph.GephGui.flatpak
             ./artifacts/geph-windows/geph-windows-setup.exe
             ${{ steps.find-deb.outputs.DEB_PATH }}
-          generate_release_notes: true
+          generate_release_notes: false
