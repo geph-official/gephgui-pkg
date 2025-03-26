@@ -16,6 +16,8 @@ jobs:
         with:
           submodules: "recursive"
           fetch-depth: 0
+      - name: Fetch all tags
+        run: git fetch --tags --force
       - name: Set up Rust
         run: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y
@@ -44,6 +46,8 @@ jobs:
         with:
           submodules: "recursive"
           fetch-depth: 0
+      - name: Fetch all tags
+        run: git fetch --tags --force
       - name: Install dependencies
         run: |
           export VERSION=$(git describe --always)
@@ -71,6 +75,8 @@ jobs:
         with:
           submodules: "recursive"
           fetch-depth: 0
+      - name: Fetch all tags
+        run: git fetch --tags --force
       - name: Build Debian package for old Ubuntu
         run: |
           export VERSION=$(git describe --always)
@@ -95,6 +101,8 @@ jobs:
         with:
           submodules: "recursive"
           fetch-depth: 0
+      - name: Fetch all tags
+        run: git fetch --tags --force
       - name: dump out version
         run: git describe --always
       - name: Set up Rust
