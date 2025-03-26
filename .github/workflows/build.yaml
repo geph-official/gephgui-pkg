@@ -22,11 +22,13 @@ jobs:
           rustup target add x86_64-apple-darwin
       - name: Build GUI
         run: |
+          export VERSION=$(git describe --always)
           cd gephgui-wry/gephgui
           npm i -f
           npm run build
       - name: Build macOS
         run: |
+          export VERSION=$(git describe --always)
           cd macos
           CARGO_BUILD_TARGET=x86_64-apple-darwin ./build-macos.bash
       - uses: actions/upload-artifact@v4
@@ -42,14 +44,17 @@ jobs:
           submodules: "recursive"
       - name: Install dependencies
         run: |
+          export VERSION=$(git describe --always)
           sudo apt update
           sudo apt install flatpak-builder flatpak ca-certificates
           git config --global protocol.file.allow always
       - name: Set up Flatpak
         run: |
+          export VERSION=$(git describe --always)
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
       - name: Build Flatpak
         run: |
+          export VERSION=$(git describe --always)
           flatpak-builder --force-clean --install-deps-from flathub --user build-dir flatpak/io.geph.GephGui.yml --repo=repo
           flatpak build-bundle repo io.geph.GephGui.flatpak io.geph.GephGui --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
       - uses: actions/upload-artifact@v4
@@ -65,11 +70,13 @@ jobs:
           submodules: "recursive"
       - name: Build Debian package for old Ubuntu
         run: |
+          export VERSION=$(git describe --always)
           chmod +x debian/build-deb-oldubuntu.sh
           ./debian/build-deb-oldubuntu.sh
       - name: Find Debian package
         id: find-deb
         run: |
+          export VERSION=$(git describe --always)
           DEB_FILE=$(find . -name "*.deb" | head -n 1)
           echo "DEB_FILE=$DEB_FILE" >> $GITHUB_ENV
           echo "Found Debian package: $DEB_FILE"
@@ -91,11 +98,13 @@ jobs:
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
       - name: Build GUI
         run: |
+          $env:VERSION = $(git describe --always)
           cd gephgui-wry/gephgui
           npm i -f
           npm run build
       - name: Build Windows
         run: |
+          $env:VERSION = $(git describe --always)
           $env:PATH += ";C:\Users\runneradmin\.cargo\bin"
           $env:CARGO_NET_GIT_FETCH_WITH_CLI = "true"
           bash windows/build-windows.bash
@@ -110,9 +119,11 @@ jobs:
   #   steps:
   #     - name: Install rclone
   #       run: |
+  #         export VERSION=$(git describe --always)
   #         curl https://rclone.org/install.sh | sudo bash
   #     - name: Configure rclone
   #       run: |
+  #         export VERSION=$(git describe --always)
   #         mkdir -p ~/.config/rclone
   #         echo "[b2]" > ~/.config/rclone/rclone.conf
   #         echo "type = b2" >> ~/.config/rclone/rclone.conf
@@ -123,15 +134,24 @@ jobs:
   #       with:
   #         path: ./artifacts
   #     - name: List downloaded artifacts
-  #       run: find ./artifacts -type f | sort
+  #       run: |
+  #         export VERSION=$(git describe --always)
+  #         find ./artifacts -type f | sort
   #     - name: Upload macOS artifact to B2
-  #       run: rclone copyto ./artifacts/geph-macos/geph-macos.zip b2:geph-dl/NEXT/geph-macos.zip
+  #       run: |
+  #         export VERSION=$(git describe --always)
+  #         rclone copyto ./artifacts/geph-macos/geph-macos.zip b2:geph-dl/NEXT/geph-macos.zip
   #     - name: Upload Flatpak artifact to B2
-  #       run: rclone copyto ./artifacts/geph-flatpak/io.geph.GephGui.flatpak b2:geph-dl/NEXT/Geph-x86_64.flatpak
+  #       run: |
+  #         export VERSION=$(git describe --always)
+  #         rclone copyto ./artifacts/geph-flatpak/io.geph.GephGui.flatpak b2:geph-dl/NEXT/Geph-x86_64.flatpak
   #     - name: Upload Windows artifact to B2
-  #       run: rclone copyto ./artifacts/geph-windows/geph-windows-setup.exe b2:geph-dl/NEXT/geph-windows-setup.exe
+  #       run: |
+  #         export VERSION=$(git describe --always)
+  #         rclone copyto ./artifacts/geph-windows/geph-windows-setup.exe b2:geph-dl/NEXT/geph-windows-setup.exe
   #     - name: Upload Debian package to B2
   #       run: |
+  #         export VERSION=$(git describe --always)
   #         DEB_FILE=$(find ./artifacts/geph-deb-oldubuntu -type f -name "*.deb" | head -n 1)
   #         if [ -n "$DEB_FILE" ]; then
   #           rclone copyto "$DEB_FILE" b2:geph-dl/NEXT/geph-ubuntu.deb
@@ -152,6 +172,7 @@ jobs:
       - name: Find Debian package
         id: find-deb
         run: |
+          export VERSION=$(git describe --always)
           DEB_FILE=$(find ./artifacts/geph-deb-oldubuntu -type f -name "*.deb" | head -n 1)
           echo "DEB_PATH=$DEB_FILE" >> $GITHUB_OUTPUT
           DEB_FILENAME=$(basename "$DEB_FILE")
