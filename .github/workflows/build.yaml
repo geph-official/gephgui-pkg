@@ -102,7 +102,7 @@ jobs:
           submodules: "recursive"
           fetch-depth: 0
       - name: Fetch all tags
-        run: git fetch --tags --force
+        run: git fetch --tags --force7
       - name: dump out version
         run: git describe --always
       - name: Set up Rust
