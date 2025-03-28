@@ -4,7 +4,7 @@ on:
   push:
     branches: [master, next]
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
   pull_request:
     branches: [master, next]
 
@@ -38,7 +38,7 @@ jobs:
         with:
           name: geph-macos
           path: macos/geph-macos.zip
-          
+
   build_flatpak:
     runs-on: ubuntu-24.04
     steps:
@@ -102,7 +102,7 @@ jobs:
           submodules: "recursive"
           fetch-depth: 0
       - name: Fetch all tags
-        run: git fetch --tags --force7
+        run: git fetch --tags --force
       - name: dump out version
         run: git describe --always
       - name: Set up Rust
