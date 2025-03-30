@@ -10,7 +10,6 @@ if [ ! -d "gephgui-wry" ]; then
 fi
 
 # Get version using git describe
-VERSION=5.0.0 # PLACEHOLD
 PACKAGE_NAME="gephgui-wry"
 ARCHITECTURE="amd64"
 MAINTAINER="Geph Team <contact@geph.io>"
