@@ -14,6 +14,8 @@ PACKAGE_NAME="gephgui-wry"
 ARCHITECTURE="amd64"
 MAINTAINER="Geph Team <contact@geph.io>"
 DEPENDS="libwebkit2gtk-4.1-0"
+VERSION=${VERSION#v}
+
 
 # Create temporary working directory
 WORK_DIR=$(mktemp -d)
