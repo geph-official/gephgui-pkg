@@ -176,7 +176,12 @@ jobs:
 
   create_github_release:
     runs-on: ubuntu-24.04
-    needs: [build_macos, build_flatpak, build_windows, build_deb_oldubuntu]
+    needs: [
+        build_macos,
+        build_flatpak,
+        # build_windows,
+        build_deb_oldubuntu,
+      ]
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Download artifacts
@@ -201,6 +206,6 @@ jobs:
           files: |
             ./artifacts/geph-macos/geph-macos.zip
             ./artifacts/geph-flatpak/io.geph.GephGui.flatpak
-            ./artifacts/geph-windows/geph-windows-setup.exe
+            # ./artifacts/geph-windows/geph-windows-setup.exe
             ${{ steps.find-deb.outputs.DEB_PATH }}
           generate_release_notes: false
