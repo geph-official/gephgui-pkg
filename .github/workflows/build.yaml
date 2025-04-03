@@ -202,7 +202,7 @@ jobs:
         with:
           name: Geph ${{ github.ref_name }}
           draft: false
-          prerelease: false
+          prerelease: true
           files: |
             ./artifacts/geph-macos/geph-macos.zip
             ./artifacts/geph-flatpak/io.geph.GephGui.flatpak
