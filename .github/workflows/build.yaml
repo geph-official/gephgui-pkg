@@ -23,6 +23,25 @@ jobs:
           curl https://sh.rustup.rs -sSf | sh -s -- -y
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           rustup target add x86_64-apple-darwin
+      # Cache Rust dependencies
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      # Cache NPM dependencies
+      - uses: actions/cache@v3
+        with:
+          path: gephgui-wry/gephgui/node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('gephgui-wry/gephgui/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
       - name: Build GUI
         run: |
           export VERSION=$(git describe --always)
@@ -58,6 +77,16 @@ jobs:
         run: |
           export VERSION=$(git describe --always)
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+      # Cache Flatpak build
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.local/share/flatpak
+            ~/.cache/flatpak
+            repo/
+          key: ${{ runner.os }}-flatpak-${{ hashFiles('flatpak/io.geph.GephGui.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-flatpak-
       - name: Build Flatpak
         run: |
           export VERSION=$(git describe --always)
@@ -77,6 +106,27 @@ jobs:
           fetch-depth: 0
       - name: Fetch all tags
         run: git fetch --tags --force
+      # Cache Rust dependencies
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-oldubuntu-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-oldubuntu-
+      # Cache build dependencies
+      - uses: actions/cache@v3
+        with:
+          path: |
+            debian/.cargo
+            debian/build-cache
+          key: ${{ runner.os }}-deb-oldubuntu-${{ hashFiles('debian/**/*') }}
+          restore-keys: |
+            ${{ runner.os }}-deb-oldubuntu-
       - name: Build Debian package for old Ubuntu
         run: |
           export VERSION=$(git describe --always)
@@ -110,6 +160,25 @@ jobs:
           curl https://win.rustup.rs/ -o rustup-init.exe
           ./rustup-init -y --default-toolchain "stable-i686-pc-windows-msvc" --profile minimal
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      # Cache Rust dependencies
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      # Cache NPM dependencies
+      - uses: actions/cache@v3
+        with:
+          path: gephgui-wry/gephgui/node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('gephgui-wry/gephgui/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
       - name: Build GUI
         run: |
           $env:VERSION = $(git describe --always)
