@@ -127,53 +127,6 @@ jobs:
           name: geph-windows
           path: windows/Output/geph-windows-setup.exe
 
-  # upload_artifacts:
-  #   runs-on: ubuntu-24.04
-  #   needs: [build_macos, build_flatpak, build_windows, build_deb_oldubuntu]
-  #   steps:
-  #     - name: Install rclone
-  #       run: |
-  #         export VERSION=$(git describe --always)
-  #         curl https://rclone.org/install.sh | sudo bash
-  #     - name: Configure rclone
-  #       run: |
-  #         export VERSION=$(git describe --always)
-  #         mkdir -p ~/.config/rclone
-  #         echo "[b2]" > ~/.config/rclone/rclone.conf
-  #         echo "type = b2" >> ~/.config/rclone/rclone.conf
-  #         echo "account = ${{ secrets.B2_KEYID }}" >> ~/.config/rclone/rclone.conf
-  #         echo "key = ${{ secrets.B2_APPKEY }}" >> ~/.config/rclone/rclone.conf
-  #     - name: Download artifacts
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         path: ./artifacts
-  #     - name: List downloaded artifacts
-  #       run: |
-  #         export VERSION=$(git describe --always)
-  #         find ./artifacts -type f | sort
-  #     - name: Upload macOS artifact to B2
-  #       run: |
-  #         export VERSION=$(git describe --always)
-  #         rclone copyto ./artifacts/geph-macos/geph-macos.zip b2:geph-dl/NEXT/geph-macos.zip
-  #     - name: Upload Flatpak artifact to B2
-  #       run: |
-  #         export VERSION=$(git describe --always)
-  #         rclone copyto ./artifacts/geph-flatpak/io.geph.GephGui.flatpak b2:geph-dl/NEXT/Geph-x86_64.flatpak
-  #     - name: Upload Windows artifact to B2
-  #       run: |
-  #         export VERSION=$(git describe --always)
-  #         rclone copyto ./artifacts/geph-windows/geph-windows-setup.exe b2:geph-dl/NEXT/geph-windows-setup.exe
-  #     - name: Upload Debian package to B2
-  #       run: |
-  #         export VERSION=$(git describe --always)
-  #         DEB_FILE=$(find ./artifacts/geph-deb-oldubuntu -type f -name "*.deb" | head -n 1)
-  #         if [ -n "$DEB_FILE" ]; then
-  #           rclone copyto "$DEB_FILE" b2:geph-dl/NEXT/geph-ubuntu.deb
-  #         else
-  #           echo "No Debian package found"
-  #           exit 1
-  #         fi
-
   create_github_release:
     runs-on: ubuntu-24.04
     needs: [build_macos, build_flatpak, build_windows, build_deb_oldubuntu]
