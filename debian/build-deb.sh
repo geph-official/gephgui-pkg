@@ -10,11 +10,12 @@ if [ ! -d "gephgui-wry" ]; then
 fi
 
 # Get version using git describe
-VERSION=5.0.0 # PLACEHOLD
 PACKAGE_NAME="gephgui-wry"
 ARCHITECTURE="amd64"
 MAINTAINER="Geph Team <contact@geph.io>"
 DEPENDS="libwebkit2gtk-4.1-0"
+VERSION=${VERSION#v}
+
 
 # Create temporary working directory
 WORK_DIR=$(mktemp -d)
