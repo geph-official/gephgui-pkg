@@ -176,12 +176,7 @@ jobs:
 
   create_github_release:
     runs-on: ubuntu-24.04
-    needs: [
-        build_macos,
-        build_flatpak,
-        # build_windows,
-        build_deb_oldubuntu,
-      ]
+    needs: [build_macos, build_flatpak, build_windows, build_deb_oldubuntu]
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Download artifacts
