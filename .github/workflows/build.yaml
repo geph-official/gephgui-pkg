@@ -201,6 +201,6 @@ jobs:
           files: |
             ./artifacts/geph-macos/geph-macos.zip
             ./artifacts/geph-flatpak/io.geph.GephGui.flatpak
-            # ./artifacts/geph-windows/geph-windows-setup.exe
+            ./artifacts/geph-windows/geph-windows-setup.exe
             ${{ steps.find-deb.outputs.DEB_PATH }}
           generate_release_notes: false
