@@ -8,7 +8,7 @@ export VERSION=$(git describe --always)
 ISCC="./iscc/ISCC.exe"
 mkdir iscc
 unzip IS6.zip -d iscc
-cargo install --locked --path ../gephgui-wry
+cargo install --locked --force --path ../gephgui-wry
 
 
 cp $(which gephgui-wry) ../blobs/win-ia32/
