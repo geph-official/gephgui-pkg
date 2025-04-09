@@ -42,7 +42,8 @@ modules:
       - "cp io.geph.GephGui.desktop /app/share/applications"
 build-options:
   append-path: "/usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/node22/bin"
-  VERSION: "${VERSION}"
+  env:
+    VERSION: "${VERSION}"
   build-args:
     - --share=network
 finish-args:
