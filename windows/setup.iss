@@ -6,9 +6,6 @@
 #define MyAppExeName "gephgui-wry.exe"
 
 [Setup]
-; NOTE: The value of AppId uniquely identifies this application.
-; Do not use the same AppId value in installers for other applications.
-; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
 AppId={{09220679-1AE0-43B6-A263-AAE2CC36B9E3}
 AppName={cm:MyAppName}
 AppVersion={#MyAppVersion}
@@ -21,8 +18,8 @@ DefaultDirName={pf}\{cm:MyAppName}
 DefaultGroupName={cm:MyAppName}
 OutputBaseFilename=geph-windows-setup
 Compression=lzma2
-SolidCompression=no
-WizardStyle=modern
+SolidCompression=yes
+WizardStyle=classic
 
 [Languages]
 Name: "en"; MessagesFile: "compiler:Default.isl"
@@ -35,13 +32,13 @@ zht.MyAppName=迷霧通
 zhs.MyAppName=迷雾通
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+; ①  Default‑ON desktop icon —— just drop the “unchecked” flag.
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [InstallDelete]
 Type: filesandordirs; Name: "{app}\*"
 
 [Files]
-;Source: "E:\geph-electron-win32-ia32\geph-electron.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\blobs\win-ia32\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\blobs\win-drivers\*"; DestDir: "{app}"; Flags: onlyifdoesntexist uninsneveruninstall recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
@@ -52,9 +49,10 @@ Name: "{group}\{cm:UninstallProgram,{cm:MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\{cm:MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-
+; ②  Optional *Launch Geph* checkbox on the finished page — default checked.
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{cm:MyAppName}}"; Flags: postinstall nowait skipifsilent
+; WebView 2 bootstrapper (unchanged)
 Filename: "{app}\MicrosoftEdgeWebview2Setup"; StatusMsg: "Installing WebView2..."; Parameters: "/install"; Check: WebView2IsNotInstalled
-
 
 [Code]
 function WebView2IsNotInstalled: Boolean;
