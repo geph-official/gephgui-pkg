@@ -20,13 +20,13 @@ modules:
     sources:
       - type: git
         url: "https://github.com/geph-official/gephgui-wry.git"
-        branch: new
+        branch: master
   - name: blobs
     buildsystem: "simple"
     build-commands:
       - "install -D pac-real -t /app/bin"
       - "install -D pac -t /app/bin"
-      - "install -D pkexec -t /app/bin" 
+      - "install -D pkexec -t /app/bin"
     sources:
       - type: dir
         path: "../blobs/linux-x64"

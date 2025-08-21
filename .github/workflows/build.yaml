@@ -25,13 +25,13 @@ jobs:
           rustup target add x86_64-apple-darwin
       - name: Build GUI
         run: |
-          export VERSION=$(git describe --always)
+          export VERSION=$(git describe --tags --always)
           cd gephgui-wry/gephgui
           npm i -f
           npm run build
       - name: Build macOS
         run: |
-          export VERSION=$(git describe --always)
+          export VERSION=$(git describe --tags --always)
           cd macos
           CARGO_BUILD_TARGET=x86_64-apple-darwin ./build-macos.bash
       - uses: actions/upload-artifact@v4
@@ -50,17 +50,17 @@ jobs:
         run: git fetch --tags --force
       - name: Install dependencies
         run: |
-          export VERSION=$(git describe --always)
+          export VERSION=$(git describe --tags --always)
           sudo apt update
           sudo apt install flatpak-builder flatpak ca-certificates
           git config --global protocol.file.allow always
       - name: Set up Flatpak
         run: |
-          export VERSION=$(git describe --always)
+          export VERSION=$(git describe --tags --always)
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
       - name: Build Flatpak
         run: |
-          export VERSION=$(git describe --always)
+          export VERSION=$(git describe --tags --always)
           flatpak-builder --force-clean --install-deps-from flathub --user build-dir flatpak/io.geph.GephGui.yml --repo=repo
           flatpak build-bundle repo io.geph.GephGui.flatpak io.geph.GephGui --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
       - uses: actions/upload-artifact@v4
@@ -79,13 +79,13 @@ jobs:
         run: git fetch --tags --force
       - name: Build Debian package for old Ubuntu
         run: |
-          export VERSION=$(git describe --always)
+          export VERSION=$(git describe --tags --always)
           chmod +x debian/build-deb-oldubuntu.sh
           ./debian/build-deb-oldubuntu.sh
       - name: Find Debian package
         id: find-deb
         run: |
-          export VERSION=$(git describe --always)
+          export VERSION=$(git describe --tags --always)
           DEB_FILE=$(find . -name "*.deb" | head -n 1)
           echo "DEB_FILE=$DEB_FILE" >> $GITHUB_ENV
           echo "Found Debian package: $DEB_FILE"
@@ -104,7 +104,7 @@ jobs:
       - name: Fetch all tags
         run: git fetch --tags --force
       - name: dump out version
-        run: git describe --always
+        run: git describe --always --tags
       - name: Set up Rust
         run: |
           curl https://win.rustup.rs/ -o rustup-init.exe
@@ -112,13 +112,13 @@ jobs:
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
       - name: Build GUI
         run: |
-          $env:VERSION = $(git describe --always)
+          $env:VERSION = $(git describe --always --tags)
           cd gephgui-wry/gephgui
           npm i -f
           npm run build
       - name: Build Windows
         run: |
-          $env:VERSION = $(git describe --always)
+          $env:VERSION = $(git describe --always --tags) 
           $env:PATH += ";C:\Users\runneradmin\.cargo\bin"
           $env:CARGO_NET_GIT_FETCH_WITH_CLI = "true"
           bash windows/build-windows.bash
@@ -186,7 +186,7 @@ jobs:
       - name: Find Debian package
         id: find-deb
         run: |
-          export VERSION=$(git describe --always)
+          export VERSION=$(git describe --tags --always)
           DEB_FILE=$(find ./artifacts/geph-deb-oldubuntu -type f -name "*.deb" | head -n 1)
           echo "DEB_PATH=$DEB_FILE" >> $GITHUB_OUTPUT
           DEB_FILENAME=$(basename "$DEB_FILE")
