@@ -1,7 +1,6 @@
 #!/bin/bash
 # Build a Debian package for gephgui-wry that also packages pac-real into /usr/local/bin/pac
 
-#
 set -e
 
 # Script must be run from the root of the repository
