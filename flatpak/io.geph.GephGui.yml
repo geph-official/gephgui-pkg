@@ -55,7 +55,7 @@ finish-args:
   # Needed for OpenGL
   - --device=dri
   # DConf access for configuring proxies
-  - --filesystem=host:rw
+  - --filesystem=xdg-run/dconf
   - --talk-name=ca.desrt.dconf
   - --talk-name=org.freedesktop.Flatpak
   - --env=DCONF_USER_CONFIG_DIR=.config/dconf
