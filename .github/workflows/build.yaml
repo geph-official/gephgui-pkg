@@ -10,7 +10,7 @@ on:
 
 jobs:
   build_macos:
-    runs-on: macos-latest
+    runs-on: macos-14-large
     steps:
       - uses: actions/checkout@v3
         with:
@@ -18,13 +18,11 @@ jobs:
           fetch-depth: 0
       - name: Fetch all tags
         run: git fetch --tags --force
-      - name: Rosetta 
-        run: softwareupdate --install-rosetta --agree-to-license
       - name: Set up Rust
         run: |
-          arch -x86_64 curl https://sh.rustup.rs -sSf | sh -s -- -y
+          curl https://sh.rustup.rs -sSf | sh -s -- -y
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-          arch -x86_64 rustup target add x86_64-apple-darwin
+          rustup target add x86_64-apple-darwin
       # Cache Rust dependencies
       - uses: actions/cache@v3
         with:
