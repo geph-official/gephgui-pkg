@@ -22,7 +22,7 @@ jobs:
         run: softwareupdate --install-rosetta --agree-to-license
       - name: Set up Rust
         run: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y
+          arch -x86_64 rustup target curl https://sh.rustup.rs -sSf | sh -s -- -y
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           arch -x86_64 rustup target add x86_64-apple-darwin
       # Cache Rust dependencies
