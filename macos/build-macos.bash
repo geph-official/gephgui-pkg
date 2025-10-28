@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 rsync -aW --delete template.app/ build.app/
 cargo install --force --locked --target x86_64-apple-darwin --path ../gephgui-wry
 cp $(which gephgui-wry) build.app/Contents/MacOS/bin
