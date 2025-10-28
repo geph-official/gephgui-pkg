@@ -18,11 +18,13 @@ jobs:
           fetch-depth: 0
       - name: Fetch all tags
         run: git fetch --tags --force
+      - name: Rosetta 
+        run: softwareupdate --install-rosetta --agree-to-license
       - name: Set up Rust
         run: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-          rustup target add x86_64-apple-darwin
+          arch -x86_64 rustup target add x86_64-apple-darwin
       # Cache Rust dependencies
       - uses: actions/cache@v3
         with:
@@ -52,7 +54,7 @@ jobs:
         run: |
           export VERSION=$(git describe --always)
           cd macos
-          CARGO_BUILD_TARGET=x86_64-apple-darwin ./build-macos.bash
+          CARGO_BUILD_TARGET=x86_64-apple-darwin arch -x86_64 ./build-macos.bash
       - uses: actions/upload-artifact@v4
         with:
           name: geph-macos
