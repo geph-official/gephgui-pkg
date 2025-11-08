@@ -12,15 +12,22 @@ modules:
   - name: gephgui-wry
     buildsystem: "simple"
     build-commands:
-      - "git submodule update --init --recursive"
-      - "git checkout `(cd ../gephgui-wry && git log --format='%H' -n 1)`"
-      - "(cd gephgui && npm i -f && npm run build)"
-      - "env CARGO_HOME=/run/build/gephgui-wry/cargo cargo build --release"
+      - |
+        if [ -d .pkg-git ]; then
+          VERSION=$(git --git-dir=.pkg-git describe --always 2>/dev/null || git --git-dir=.pkg-git rev-parse --short HEAD)
+        else
+          VERSION="dev"
+        fi
+        printf "%s" "$VERSION" > .version
+      - "export VERSION=$(cat .version) && (cd gephgui && npm i -f && npm run build)"
+      - "export VERSION=$(cat .version) && env CARGO_HOME=/run/build/gephgui-wry/cargo cargo build --release"
       - "install -D ./target/release/gephgui-wry -t /app/bin"
     sources:
-      - type: git
-        url: "https://github.com/geph-official/gephgui-wry.git"
-        branch: master
+      - type: dir
+        path: "../gephgui-wry"
+      - type: dir
+        path: "../.git"
+        dest: ".pkg-git"
   - name: blobs
     buildsystem: "simple"
     build-commands:
