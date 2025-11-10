@@ -33,7 +33,6 @@ modules:
     build-commands:
       - "install -D pac-real -t /app/bin"
       - "install -D pac -t /app/bin"
-      - "install -D pkexec -t /app/bin"
     sources:
       - type: dir
         path: "../blobs/linux-x64"
