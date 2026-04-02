@@ -3,7 +3,6 @@ runtime: org.gnome.Platform
 runtime-version: "47"
 sdk: org.gnome.Sdk
 sdk-extensions:
-  - org.freedesktop.Sdk.Extension.rust-stable
   - org.freedesktop.Sdk.Extension.node22
 command: "gephgui-wry"
 modules:
@@ -20,7 +19,16 @@ modules:
         fi
         printf "%s" "$VERSION" > .version
       - "export VERSION=$(cat .version) && (cd gephgui && npm i -f && npm run build)"
-      - "export VERSION=$(cat .version) && env CARGO_HOME=/run/build/gephgui-wry/cargo cargo build --release"
+      - |
+        export VERSION="$(cat .version)"
+        export CARGO_HOME=/run/build/gephgui-wry/cargo
+        export RUSTUP_HOME=/run/build/gephgui-wry/rustup
+        export PATH="$CARGO_HOME/bin:$PATH"
+        export RUSTUP_INIT_SKIP_PATH_CHECK=yes
+        curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal --default-toolchain 1.94.1
+        rustc --version
+        cargo --version
+        cargo build --release --locked
       - "install -D ./target/release/gephgui-wry -t /app/bin"
     sources:
       - type: dir
@@ -47,7 +55,7 @@ modules:
       - "mkdir -p /app/share/applications"
       - "cp io.geph.GephGui.desktop /app/share/applications"
 build-options:
-  append-path: "/usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/node22/bin"
+  append-path: "/usr/lib/sdk/node22/bin"
   build-args:
     - --share=network
 finish-args:
