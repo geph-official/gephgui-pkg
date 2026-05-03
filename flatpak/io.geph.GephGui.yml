@@ -6,8 +6,6 @@ sdk-extensions:
   - org.freedesktop.Sdk.Extension.node22
 command: "gephgui-wry"
 modules:
-  - shared-modules/dbus-glib/dbus-glib-0.110.json
-  - shared-modules/libappindicator/libappindicator-gtk3-12.10.json
   - name: gephgui-wry
     buildsystem: "simple"
     build-commands:
