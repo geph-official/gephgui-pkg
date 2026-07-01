@@ -1,0 +1,7 @@
+[Unit]
+Description=Geph Flatpak self-cleanup (removes the host manager after the Flatpak is uninstalled)
+
+[Service]
+Type=oneshot
+# @BINDIR@ and @OWNER@ are templated in by install-host-manager.sh at install time.
+ExecStart=@BINDIR@/geph-flatpak-watchdog @OWNER@ @BINDIR@

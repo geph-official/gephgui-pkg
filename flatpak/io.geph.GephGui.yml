@@ -34,14 +34,47 @@ modules:
       - type: dir
         path: "../.git"
         dest: ".pkg-git"
-  - name: blobs
+  # The privileged host manager cannot run inside the sandbox, so we bundle a
+  # host-runnable (statically linked, musl) build of geph5 + geph5-client. The
+  # startup bootstrap (gephgui-wry/src/bootstrap.rs) stages these out to the host
+  # and installs them there via pkexec. CI produces these blobs (see build.yaml).
+  - name: host-manager-bin
     buildsystem: "simple"
     build-commands:
-      - "install -D pac-real -t /app/bin"
-      - "install -D pac -t /app/bin"
+      - "install -D -m755 geph5 -t /app/bin"
+      - "install -D -m755 geph5-client -t /app/bin"
     sources:
       - type: dir
         path: "../blobs/linux-x64"
+  # Packaging-owned privileged installer + self-cleanup watchdog assets, staged out
+  # to the host by the bootstrap. geph5 itself stays unaware of any of this.
+  - name: host-manager-assets
+    buildsystem: "simple"
+    build-commands:
+      - "install -D -m755 install-host-manager.sh /app/libexec/geph/install-host-manager.sh"
+      - "install -D -m755 geph-flatpak-watchdog.sh /app/libexec/geph/geph-flatpak-watchdog.sh"
+      - "install -D -m644 geph-cleanup.service /app/libexec/geph/geph-cleanup.service"
+      - "install -D -m644 geph-cleanup.timer /app/libexec/geph/geph-cleanup.timer"
+    sources:
+      - type: file
+        path: "install-host-manager.sh"
+      - type: file
+        path: "geph-flatpak-watchdog.sh"
+      - type: file
+        path: "geph-cleanup.service"
+      - type: file
+        path: "geph-cleanup.timer"
+  # rfd (our native dialog library) shells out to `zenity` for message dialogs, and
+  # the GNOME runtime does not ship it, so build it into the sandbox. -Dmanpage=false
+  # avoids the help2man build dependency; webkitgtk is off by default.
+  - name: zenity
+    buildsystem: meson
+    config-opts:
+      - -Dmanpage=false
+    sources:
+      - type: archive
+        url: https://download.gnome.org/sources/zenity/4.0/zenity-4.0.5.tar.xz
+        sha256: 8a3ffe7751bed497a758229ece07be9114ad4e46a066abae4e5f31d6da4c0e9e
   - name: icons
     buildsystem: "simple"
     sources:
@@ -62,12 +95,13 @@ finish-args:
   - --socket=x11
   # Wayland access
   - --socket=wayland
-  # Needs to talk to the network:
+  # Needs to talk to the network (also gives loopback access to the engine):
   - --share=network
   # Needed for OpenGL
   - --device=dri
-  # DConf access for configuring proxies
-  - --filesystem=host:rw
-  - --talk-name=ca.desrt.dconf
+  # Reach the privileged manager's control socket on the host. The manager binds it
+  # 0666; we only need to connect, so read-only is enough. The bind-mount appears
+  # once /run/geph exists at launch (the bootstrap relaunches on first install).
+  - --filesystem=/run/geph:ro
+  # Run the host-side installer/uninstaller via `flatpak-spawn --host pkexec`.
   - --talk-name=org.freedesktop.Flatpak
-  - --env=DCONF_USER_CONFIG_DIR=.config/dconf

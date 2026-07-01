@@ -1,5 +1,7 @@
 #!/bin/bash
-# Build a Debian package for gephgui-wry that also packages pac-real into /usr/local/bin/pac
+# Build a Debian package containing the Geph GUI (gephgui-wry) plus the privileged
+# manager (geph5) and engine (geph5-client), and register the manager as a systemd
+# service on install.
 
 set -e
 
@@ -13,7 +15,7 @@ fi
 PACKAGE_NAME="gephgui-wry"
 ARCHITECTURE="amd64"
 MAINTAINER="Geph Team <contact@geph.io>"
-DEPENDS="libwebkit2gtk-4.1-0"
+DEPENDS="libwebkit2gtk-4.1-0, nftables, iproute2, policykit-1"
 VERSION=${VERSION#v}
 
 
@@ -23,7 +25,6 @@ trap 'rm -rf "$WORK_DIR"' EXIT
 
 # Create Debian package structure
 mkdir -p "$WORK_DIR/DEBIAN"
-mkdir -p "$WORK_DIR/usr/local/bin"
 mkdir -p "$WORK_DIR/usr/bin"
 mkdir -p "$WORK_DIR/usr/share/applications"
 mkdir -p "$WORK_DIR/usr/share/icons/hicolor/256x256/apps"
@@ -65,10 +66,14 @@ cargo build --release
 cp target/release/gephgui-wry "$WORK_DIR/usr/bin/"
 cd ..
 
-# Copy pac-real to the package directory as pac
-echo "Copying pac-real to package..."
-cp blobs/linux-x64/pac-real "$WORK_DIR/usr/local/bin/pac"
-chmod +x "$WORK_DIR/usr/local/bin/pac"
+# Build the privileged manager (geph5) and engine (geph5-client) from the geph5
+# submodule and install both side-by-side (geph5 resolves geph5-client as a sibling
+# of its own executable).
+echo "Building geph5 manager + engine..."
+git submodule update --init --recursive
+( cd geph5 && cargo build --release -p geph5-app -p geph5-client )
+cp geph5/target/release/geph5 "$WORK_DIR/usr/bin/"
+cp geph5/target/release/geph5-client "$WORK_DIR/usr/bin/"
 
 # Create desktop file
 cat > "$WORK_DIR/usr/share/applications/geph.desktop" << EOF
@@ -87,13 +92,28 @@ if [ -f "flatpak/icons/256x256/io.geph.GephGui.png" ]; then
   cp flatpak/icons/256x256/io.geph.GephGui.png "$WORK_DIR/usr/share/icons/hicolor/256x256/apps/geph.png"
 fi
 
-# Create postinst script to set permissions
-cat > "$WORK_DIR/DEBIAN/postinst" << EOF
+# postinst: register + start the privileged manager as a systemd service. Don't fail
+# the install if systemd isn't running (e.g. building inside a container); the GUI
+# offers to set it up via pkexec on first launch as a fallback.
+cat > "$WORK_DIR/DEBIAN/postinst" << 'EOF'
 #!/bin/bash
-chmod +x /usr/local/bin/pac
-chmod +x /usr/bin/gephgui-wry
+set -e
+chmod +x /usr/bin/gephgui-wry /usr/bin/geph5 /usr/bin/geph5-client
+if [ -d /run/systemd/system ]; then
+  /usr/bin/geph5 register-manager || echo "geph5 register-manager failed; the GUI will retry on launch"
+fi
 EOF
 chmod +x "$WORK_DIR/DEBIAN/postinst"
+
+# prerm: tear the manager back down on removal, while the binary still exists.
+cat > "$WORK_DIR/DEBIAN/prerm" << 'EOF'
+#!/bin/bash
+set -e
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+  /usr/bin/geph5 unregister-manager || true
+fi
+EOF
+chmod +x "$WORK_DIR/DEBIAN/prerm"
 
 # Build the package
 echo "Building Debian package..."

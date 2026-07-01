@@ -1,0 +1,10 @@
+[Unit]
+Description=Periodically check whether the Geph Flatpak was uninstalled
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

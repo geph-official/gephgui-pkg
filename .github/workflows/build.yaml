@@ -77,6 +77,20 @@ jobs:
         run: |
           export VERSION=$(git describe --always)
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+      # The privileged manager can't run inside the sandbox, so the Flatpak bundles a
+      # statically-linked (musl) host build of geph5 + geph5-client that the GUI
+      # stages out to the host. Build them into blobs/linux-x64 before the manifest's
+      # `host-manager-bin` module consumes them.
+      - name: Build host manager (static musl)
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y
+          source "$HOME/.cargo/env"
+          rustup target add x86_64-unknown-linux-musl
+          sudo apt install -y musl-tools
+          ( cd geph5 && cargo build --release --target x86_64-unknown-linux-musl -p geph5-app -p geph5-client )
+          mkdir -p blobs/linux-x64
+          cp geph5/target/x86_64-unknown-linux-musl/release/geph5 blobs/linux-x64/geph5
+          cp geph5/target/x86_64-unknown-linux-musl/release/geph5-client blobs/linux-x64/geph5-client
       # Cache Flatpak build
       - uses: actions/cache@v3
         with:
@@ -169,6 +183,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
+            geph5/target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-

@@ -1,0 +1,58 @@
+#!/bin/bash
+#
+# Runs as root at the end of the .pkg install. It registers the privileged geph
+# manager (the tunnel/proxy/kill-switch supervisor) as a LaunchDaemon so it runs
+# as root at boot, across reboots, independent of whether the GUI is open.
+#
+# The plist points at the manager binary INSIDE the app bundle
+# (Geph.app/Contents/Resources/geph). An app update replaces that binary in
+# place; the `kickstart -k` below then restarts the manager on the new binary,
+# and because the plist itself never changes the root grant survives updates
+# with no re-authentication.
+
+set -e
+
+LABEL="io.geph.manager"
+APP="/Applications/Geph.app"
+MANAGER_BIN="$APP/Contents/Resources/geph"
+PLIST="/Library/LaunchDaemons/${LABEL}.plist"
+
+cat > "$PLIST" <<PLIST_EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>${LABEL}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>${MANAGER_BIN}</string>
+        <string>manager</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/var/log/geph-manager.log</string>
+    <key>StandardErrorPath</key>
+    <string>/var/log/geph-manager.log</string>
+</dict>
+</plist>
+PLIST_EOF
+
+# launchd refuses to load a daemon whose plist is not root-owned / group- or
+# world-writable.
+chown root:wheel "$PLIST"
+chmod 644 "$PLIST"
+
+# Load cleanly whether this is a first install or an upgrade: boot out any
+# previous instance (ignore "not loaded"), then bootstrap + enable + start.
+# The manager creates its own /var/run/geph runtime dir and the _geph service
+# user on first run, so nothing else is needed here.
+launchctl bootout system "$PLIST" 2>/dev/null || true
+launchctl bootstrap system "$PLIST"
+launchctl enable "system/${LABEL}"
+launchctl kickstart -k "system/${LABEL}" || true
+
+exit 0
