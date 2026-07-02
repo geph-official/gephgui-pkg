@@ -147,3 +147,5 @@ finish-args:
   - --filesystem=/run/geph:ro
   # Run the host-side installer/uninstaller via `flatpak-spawn --host pkexec`.
   - --talk-name=org.freedesktop.Flatpak
+  # Register the tray icon (StatusNotifierItem) with the host's tray daemon.
+  - --talk-name=org.kde.StatusNotifierWatcher
