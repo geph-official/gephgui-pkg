@@ -14,6 +14,17 @@ VERSION="${VERSION:-$(git describe --always)}"
 ARTIFACT="output/geph-linux-${VERSION#v}.flatpak"
 mkdir -p output
 
+# Initialize only submodules that are missing (uninitialized ones are prefixed
+# with '-' in `submodule status`); the manifest needs gephgui-wry, geph5, and
+# flatpak/shared-modules. Deliberately do NOT `update` populated ones — you may
+# be developing geph5/gephgui-wry in-tree.
+git submodule status --recursive 2>/dev/null \
+    | awk '/^-/ {print $2}' \
+    | while read -r sm; do
+        echo ">> initializing missing submodule: $sm"
+        git submodule update --init --recursive "$sm"
+    done
+
 # flatpak-builder consumes this checkout via dir sources (including ../.git for
 # `git describe`) and clones submodules over the file protocol.
 git config --global protocol.file.allow always

@@ -6,6 +6,10 @@ sdk-extensions:
   - org.freedesktop.Sdk.Extension.node22
 command: "gephgui-wry"
 modules:
+  # The tray icon dlopens lib(ayatana-)appindicator3 at runtime, which the GNOME
+  # runtime doesn't ship; bundle flathub's shared module (which brings its own
+  # libdbusmenu etc.).
+  - shared-modules/libappindicator/libappindicator-gtk3-12.10.json
   # libxdo: the tray icon (tray-icon -> muda) links against it, and the GNOME
   # runtime doesn't ship it. Only the library/header/pc are installed, not the
   # xdotool binary.
