@@ -49,14 +49,36 @@ lipo_or_copy() { local out="$1"; shift; if [ "$#" -eq 1 ]; then cp "$1" "$out"; 
 export VERSION="${VERSION:-$(git -C "$REPO_ROOT" describe --always 2>/dev/null || echo 0.0.0)}"
 ARTIFACT="$OUTPUT/geph-macos-${VERSION#v}.pkg"
 
-# Optional signing/notarization (all no-ops if unset — a local unsigned pkg
-# installs fine via `sudo installer -pkg output/geph-macos-<version>.pkg -target /`):
+# Signing/notarization. On a machine logged into the Apple Developer account
+# (i.e. the Developer ID certs live in the login keychain) these are auto-detected
+# and the local build comes out signed + notarized. CI has none of them, so the
+# detection yields empty and it builds unsigned automatically — a local unsigned
+# pkg still installs fine via `sudo installer -pkg output/geph-macos-<ver>.pkg -target /`.
+# Set any of these env vars explicitly to override the auto-detection.
 #   APP_SIGN_ID        "Developer ID Application: ..."   (codesign the app + manager)
 #   INSTALLER_SIGN_ID  "Developer ID Installer: ..."     (sign the .pkg)
 #   NOTARY_PROFILE     notarytool --keychain-profile name (notarize + staple)
-APP_SIGN_ID="${APP_SIGN_ID:-}"
-INSTALLER_SIGN_ID="${INSTALLER_SIGN_ID:-}"
+#
+# Auto-detection notes:
+#   - `-p basic` (not codesigning) is used because "Developer ID Installer" certs
+#     aren't code-signing identities and don't appear under the codesigning policy.
+#   - The notary profile is a name you create once with
+#       xcrun notarytool store-credentials "$NOTARY_PROFILE_NAME" --apple-id <id> --team-id <team> --password <app-specific-pw>
+#     notarytool keeps that in the *data-protection* keychain, which the `security`
+#     CLI cannot see (find-generic-password can't find it), so there's no reliable
+#     offline existence check. Instead we pair notarization with installer signing:
+#     if the Developer ID Installer cert is present we assume the profile exists too
+#     (both are set up together on a real signing machine; CI has neither).
+NOTARY_PROFILE_NAME="geph-notary"
+find_identity() { security find-identity -v -p basic 2>/dev/null | grep -o "\"$1: [^\"]*\"" | head -1 | tr -d '"'; }
+APP_SIGN_ID="${APP_SIGN_ID:-$(find_identity 'Developer ID Application')}"
+INSTALLER_SIGN_ID="${INSTALLER_SIGN_ID:-$(find_identity 'Developer ID Installer')}"
+if [ -z "${NOTARY_PROFILE:-}" ] && [ -n "$INSTALLER_SIGN_ID" ]; then
+    NOTARY_PROFILE="$NOTARY_PROFILE_NAME"
+fi
 NOTARY_PROFILE="${NOTARY_PROFILE:-}"
+
+echo ">> signing config: app='${APP_SIGN_ID:-<none>}' installer='${INSTALLER_SIGN_ID:-<none>}' notary='${NOTARY_PROFILE:-<none>}'"
 
 echo ">> building Geph $VERSION for $ARCHS"
 
