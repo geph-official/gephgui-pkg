@@ -1,0 +1,6 @@
+# Local build artifacts (build-windows/macos/deb/flatpak.bash)
+output/
+# flatpak-builder intermediates (build-flatpak.bash)
+build-dir/
+repo/
+.flatpak-builder/

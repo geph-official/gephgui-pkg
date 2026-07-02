@@ -1,23 +1,24 @@
 #!/bin/bash
 # Build a Debian package containing the Geph GUI (gephgui-wry) plus the privileged
 # manager (geph5) and engine (geph5-client), and register the manager as a systemd
-# service on install.
+# service on install. Runs INSIDE the Ubuntu 22.04 container that the top-level
+# build-deb.bash sets up — run that instead of this directly.
+# Result: ./output/gephgui-wry_<version>_amd64.deb
 
 set -e
 
-# Script must be run from the root of the repository
-if [ ! -d "gephgui-wry" ]; then
-  echo "Error: This script must be run from the root of the repository."
-  exit 1
-fi
+cd "$(dirname "$(readlink -f "$0")")"
 
 # Get version using git describe
 PACKAGE_NAME="gephgui-wry"
 ARCHITECTURE="amd64"
 MAINTAINER="Geph Team <contact@geph.io>"
 DEPENDS="libwebkit2gtk-4.1-0, nftables, iproute2, policykit-1"
+VERSION="${VERSION:-$(git describe --always)}"
 VERSION=${VERSION#v}
 
+OUTPUT="output"
+mkdir -p "$OUTPUT"
 
 # Create temporary working directory
 WORK_DIR=$(mktemp -d)
@@ -43,15 +44,12 @@ Description: Geph GUI using WRY
  This package contains the GUI client built with WRY.
 EOF
 
+# Update submodules
+git submodule update --init --recursive
+
 # Build the gephgui-wry binary
 echo "Building gephgui-wry..."
 cd gephgui-wry
-if [ ! -d "target" ]; then
-  mkdir -p target
-fi
-
-# Update submodules
-git submodule update --init --recursive
 
 # Build the frontend
 cd gephgui
@@ -70,7 +68,6 @@ cd ..
 # submodule and install both side-by-side (geph5 resolves geph5-client as a sibling
 # of its own executable).
 echo "Building geph5 manager + engine..."
-git submodule update --init --recursive
 ( cd geph5 && cargo build --release -p geph5-app -p geph5-client )
 cp geph5/target/release/geph5 "$WORK_DIR/usr/bin/"
 cp geph5/target/release/geph5-client "$WORK_DIR/usr/bin/"
@@ -117,7 +114,7 @@ chmod +x "$WORK_DIR/DEBIAN/prerm"
 
 # Build the package
 echo "Building Debian package..."
-PACKAGE_FILE="${PACKAGE_NAME}_${VERSION}_${ARCHITECTURE}.deb"
+PACKAGE_FILE="$OUTPUT/${PACKAGE_NAME}_${VERSION}_${ARCHITECTURE}.deb"
 dpkg-deb --build "$WORK_DIR" "$PACKAGE_FILE"
 
 echo "Debian package built: $PACKAGE_FILE"
