@@ -89,6 +89,8 @@ STAGE="$MACOS_DIR/pkgroot"        # what pkgbuild installs under /
 CARGO_OUT="$MACOS_DIR/cargo-out"  # cargo install --root target (kept out of ~/.cargo/bin)
 rm -rf "$BUILD_APP" "$STAGE" "$CARGO_OUT" "$MACOS_DIR/geph-component.pkg"
 mkdir -p "$OUTPUT"
+# Drop stale macOS artifacts so output/ only ever holds the latest pkg per OS.
+rm -f "$OUTPUT"/geph-macos-*.pkg
 
 # ---- 3. assemble the app bundle ------------------------------------------
 

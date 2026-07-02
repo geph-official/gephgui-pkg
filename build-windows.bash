@@ -14,6 +14,8 @@ ARTIFACT="output/geph-windows-${VERSION#v}.exe"
 STAGE="blobs/win-ia32"
 OUTPUT="output"
 mkdir -p "$OUTPUT"
+# Drop stale Windows artifacts so output/ only ever holds the latest exe per OS.
+rm -f "$OUTPUT"/geph-windows-*.exe
 
 # We ship a 32-bit installer (one i686 build runs on all Windows, and the
 # vendored wintun.dll is x86). Target i686 explicitly rather than relying on the

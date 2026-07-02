@@ -13,6 +13,8 @@ cd "$(dirname "$(readlink -f "$0")")"
 VERSION="${VERSION:-$(git describe --always)}"
 ARTIFACT="output/geph-linux-${VERSION#v}.flatpak"
 mkdir -p output
+# Drop stale Flatpak artifacts so output/ only ever holds the latest per OS.
+rm -f output/geph-linux-*.flatpak
 
 # Initialize only submodules that are missing (uninitialized ones are prefixed
 # with '-' in `submodule status`); the manifest needs gephgui-wry, geph5, and

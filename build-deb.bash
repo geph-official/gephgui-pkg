@@ -11,6 +11,8 @@ REPO_ROOT="$PWD"
 
 export VERSION="${VERSION:-$(git describe --always)}"
 mkdir -p output
+# Drop stale deb artifacts so output/ only ever holds the latest per OS.
+rm -f output/*.deb
 
 # Get current user and group IDs so the artifacts land owned by the host user.
 USER_ID=$(id -u)
