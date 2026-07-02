@@ -16,6 +16,12 @@ mkdir -p output
 # Drop stale Flatpak artifacts so output/ only ever holds the latest per OS.
 rm -f output/geph-linux-*.flatpak
 
+# Persistent cross-build cache for the in-sandbox gephgui-wry module (rustup
+# toolchain, cargo registry + target/, npm cache). The manifest mounts this dir
+# into that module's build via --filesystem; see flatpak/io.geph.GephGui.yml.
+# Wipe it if you ever need a clean-room rebuild.
+mkdir -p /var/tmp/geph-flatpak-cache
+
 # Initialize only submodules that are missing (uninitialized ones are prefixed
 # with '-' in `submodule status`); the manifest needs gephgui-wry, geph5, and
 # flatpak/shared-modules. Deliberately do NOT `update` populated ones — you may
@@ -38,7 +44,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 # stages out to the host. Build them into blobs/linux-x64 before the manifest's
 # `host-manager-bin` module consumes them.
 rustup target add x86_64-unknown-linux-musl
-( cd geph5 && cargo build --release --target x86_64-unknown-linux-musl -p geph5-app -p geph5-client )
+( cd geph5 && cargo build --locked --release --target x86_64-unknown-linux-musl -p geph5-app -p geph5-client )
 mkdir -p blobs/linux-x64
 cp geph5/target/x86_64-unknown-linux-musl/release/geph5 blobs/linux-x64/geph5
 cp geph5/target/x86_64-unknown-linux-musl/release/geph5-client blobs/linux-x64/geph5-client

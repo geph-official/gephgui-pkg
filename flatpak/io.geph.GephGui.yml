@@ -31,6 +31,16 @@ modules:
         # libxdo-sys links -lxdo without consulting pkg-config, so point rustc
         # at the libxdo we install into /app/lib above.
         RUSTFLAGS: "-L /app/lib"
+      # This module is a permanent cache miss: its dir sources (gephgui-wry,
+      # geph5, .git) change on every commit, so flatpak-builder rebuilds it from
+      # an empty sandbox each time. Mount a persistent host cache dir so the
+      # rebuild reuses the rustup toolchain, the cargo registry, the target/
+      # tree (incremental compile), and the npm cache instead of re-downloading
+      # and recompiling everything from scratch. Requires network, which we
+      # already share for the live rustup/npm/cargo fetches.
+      build-args:
+        - --share=network
+        - --filesystem=/var/tmp/geph-flatpak-cache
     build-commands:
       - |
         if [ -d .pkg-git ]; then
@@ -39,18 +49,26 @@ modules:
           VERSION="dev"
         fi
         printf "%s" "$VERSION" > .version
-      - "export VERSION=$(cat .version) && (cd gephgui-wry/gephgui && npm i -f && npm run build)"
       - |
         export VERSION="$(cat .version)"
-        export CARGO_HOME=/run/build/gephgui-wry/cargo
-        export RUSTUP_HOME=/run/build/gephgui-wry/rustup
+        export npm_config_cache=/var/tmp/geph-flatpak-cache/npm
+        (cd gephgui-wry/gephgui && npm i -f && npm run build)
+      - |
+        export VERSION="$(cat .version)"
+        CACHE=/var/tmp/geph-flatpak-cache
+        export CARGO_HOME="$CACHE/cargo"
+        export RUSTUP_HOME="$CACHE/rustup"
+        export CARGO_TARGET_DIR="$CACHE/target"
         export PATH="$CARGO_HOME/bin:$PATH"
         export RUSTUP_INIT_SKIP_PATH_CHECK=yes
-        curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal --default-toolchain 1.94.1
+        # Only install the toolchain when it isn't already in the cached RUSTUP_HOME.
+        if ! command -v rustup >/dev/null 2>&1; then
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal --default-toolchain 1.94.1
+        fi
         rustc --version
         cargo --version
         (cd gephgui-wry && cargo build --release --locked)
-      - "install -D ./gephgui-wry/target/release/gephgui-wry -t /app/bin"
+        install -D "$CARGO_TARGET_DIR/release/gephgui-wry" -t /app/bin
     sources:
       # Skip host build artifacts: flatpak-builder's copy strips exec bits, so a
       # copied-in node_modules leaves .bin shims non-executable (npm i then sees

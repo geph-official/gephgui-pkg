@@ -7,13 +7,15 @@
 
 set -e
 
-cd "$(dirname "$(readlink -f "$0")")"
+# This script lives in debian/, but every path below (submodules, flatpak/,
+# output/) is relative to the repo root, so cd there.
+cd "$(dirname "$(readlink -f "$0")")/.."
 
 # Get version using git describe
 PACKAGE_NAME="gephgui-wry"
 ARCHITECTURE="amd64"
 MAINTAINER="Geph Team <contact@geph.io>"
-DEPENDS="libwebkit2gtk-4.1-0, nftables, iproute2, policykit-1"
+DEPENDS="libwebkit2gtk-4.1-0, libxdo3, nftables, iproute2, policykit-1"
 VERSION="${VERSION:-$(git describe --always)}"
 VERSION=${VERSION#v}
 
@@ -51,14 +53,17 @@ git submodule update --init --recursive
 echo "Building gephgui-wry..."
 cd gephgui-wry
 
-# Build the frontend
+# Build the frontend. Wipe any host-installed node_modules first: it may have
+# been populated on the host (e.g. on a filesystem that drops the exec bit),
+# which leaves node_modules/.bin/vite non-executable inside the container.
 cd gephgui
+rm -rf node_modules
 npm install -f
 npm run build
 cd ..
 
 # Build the Rust backend
-cargo build --release
+cargo build --locked --release
 
 # Copy the built binary to the package directory
 cp target/release/gephgui-wry "$WORK_DIR/usr/bin/"
@@ -68,7 +73,7 @@ cd ..
 # submodule and install both side-by-side (geph5 resolves geph5-client as a sibling
 # of its own executable).
 echo "Building geph5 manager + engine..."
-( cd geph5 && cargo build --release -p geph5-app -p geph5-client )
+( cd geph5 && cargo build --locked --release -p geph5-app -p geph5-client )
 cp geph5/target/release/geph5 "$WORK_DIR/usr/bin/"
 cp geph5/target/release/geph5-client "$WORK_DIR/usr/bin/"
 
