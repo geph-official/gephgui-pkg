@@ -4,3 +4,6 @@ output/
 build-dir/
 repo/
 .flatpak-builder/
+# Downloaded geph5 binaries (fetched by build scripts)
+blobs/linux-x64/geph5
+blobs/linux-x64/geph5-client
