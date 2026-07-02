@@ -39,13 +39,14 @@ ARCHS="${ARCHS:-x86_64-apple-darwin aarch64-apple-darwin}"
 # binary inherits the build host's SDK as its floor and crashes on older systems.
 min_os_for() { case "$1" in aarch64-apple-darwin) echo 11.0 ;; *) echo 10.15 ;; esac; }
 
-# clang spells the arm64 arch "arm64", not "aarch64".
-clang_arch_for() { case "$1" in aarch64-*) echo arm64 ;; *) echo x86_64 ;; esac; }
-
 # lipo N inputs into one universal output; plain copy when only one arch is built.
 lipo_or_copy() { local out="$1"; shift; if [ "$#" -eq 1 ]; then cp "$1" "$out"; else lipo -create -output "$out" "$@"; fi; }
 
-VERSION="${VERSION:-$(git -C "$REPO_ROOT" describe --always 2>/dev/null || echo 0.0.0)}"
+# Exported so the cargo builds below bake it in: gephgui-wry reads it via
+# option_env!("VERSION") for the "About" display and the auto-updater's
+# current-version check. Without the export it compiles to None -> the UI shows
+# "(development version)" and updates misbehave.
+export VERSION="${VERSION:-$(git -C "$REPO_ROOT" describe --always 2>/dev/null || echo 0.0.0)}"
 ARTIFACT="$OUTPUT/geph-macos-${VERSION#v}.pkg"
 
 # Optional signing/notarization (all no-ops if unset — a local unsigned pkg
@@ -98,33 +99,40 @@ mkdir -p "$CARGO_OUT"
 # Each binary is built once per arch (into its own dir / --root) with that arch's
 # deployment target, then lipo'd into a single universal binary.
 
-# entrypoint shim (chdir into the bundle, exec ./bin/gephgui-wry)
-ep_inputs=()
-for t in $ARCHS; do
-    clang -arch "$(clang_arch_for "$t")" -mmacosx-version-min="$(min_os_for "$t")" \
-        -Os -Wall -Wextra -o "$CARGO_OUT/entrypoint-$t" "$MACOS_DIR/entrypoint.c"
-    ep_inputs+=("$CARGO_OUT/entrypoint-$t")
-done
-lipo_or_copy "$BUILD_APP/Contents/MacOS/entrypoint" "${ep_inputs[@]}"
-
-# GUI (unprivileged front-end) -> Contents/MacOS/bin
+# GUI (unprivileged front-end) -> Contents/MacOS/gephgui-wry, launched directly
+# as CFBundleExecutable. Historically an `entrypoint` C shim exec'd the GUI from
+# a bin/ subdir (to chdir + put helper tools on PATH), but the helpers are gone
+# and the execv broke the tray icon: after exec, the process's identity no longer
+# matches what LaunchServices registered, and NSStatusItem registration silently
+# fails — app launched fine, no menu-bar icon. Launching the Rust binary directly
+# fixes that (and is one less binary to build/sign).
 # Privileged manager (geph5 crate, binary name `geph5`) -> Contents/Resources/geph.
 # The LaunchDaemon plist points at the manager; its CLI subcommands
 # (connect/status/…) are the same binary.
+# Engine (geph5-client) -> Contents/Resources/geph5-client, a sibling of the
+# manager. The manager resolves and spawns the engine as this sibling binary
+# (see geph5-app supervisor::engine_bin_path); without it, connecting fails with
+# "staging engine binary geph5-client ... No such file or directory".
 gui_inputs=()
 mgr_inputs=()
+engine_inputs=()
 for t in $ARCHS; do
     export MACOSX_DEPLOYMENT_TARGET="$(min_os_for "$t")"
     cargo install --force --locked --target "$t" \
         --path "$REPO_ROOT/gephgui-wry" --root "$CARGO_OUT/gui-$t"
     cargo install --force --locked --target "$t" \
         --path "$REPO_ROOT/geph5/binaries/geph5-app" --root "$CARGO_OUT/manager-$t"
+    cargo install --force --locked --target "$t" \
+        --path "$REPO_ROOT/geph5/binaries/geph5-client" --root "$CARGO_OUT/engine-$t"
     gui_inputs+=("$CARGO_OUT/gui-$t/bin/gephgui-wry")
     mgr_inputs+=("$CARGO_OUT/manager-$t/bin/geph5")
+    engine_inputs+=("$CARGO_OUT/engine-$t/bin/geph5-client")
 done
-mkdir -p "$BUILD_APP/Contents/MacOS/bin"
-lipo_or_copy "$BUILD_APP/Contents/MacOS/bin/gephgui-wry" "${gui_inputs[@]}"
-lipo_or_copy "$BUILD_APP/Contents/Resources/geph"        "${mgr_inputs[@]}"
+# The template ships no MacOS/ dir (all executables are built), so create it.
+mkdir -p "$BUILD_APP/Contents/MacOS"
+lipo_or_copy "$BUILD_APP/Contents/MacOS/gephgui-wry"      "${gui_inputs[@]}"
+lipo_or_copy "$BUILD_APP/Contents/Resources/geph"         "${mgr_inputs[@]}"
+lipo_or_copy "$BUILD_APP/Contents/Resources/geph5-client" "${engine_inputs[@]}"
 
 # Uninstaller (counterpart of pkg-scripts/postinstall). Ships in the bundle so
 # it matches what was installed. Copy BEFORE codesigning so it's covered by the
@@ -141,7 +149,7 @@ install -m 755 "$MACOS_DIR/uninstall.sh" "$BUILD_APP/Contents/Resources/uninstal
 
 if [ -n "$APP_SIGN_ID" ]; then
     echo ">> codesigning app with '$APP_SIGN_ID'"
-    for f in Contents/Resources/geph Contents/MacOS/bin/gephgui-wry Contents/MacOS/entrypoint; do
+    for f in Contents/Resources/geph Contents/Resources/geph5-client Contents/MacOS/gephgui-wry; do
         codesign --force --options runtime --timestamp -s "$APP_SIGN_ID" "$BUILD_APP/$f"
     done
     codesign --force --options runtime --timestamp -s "$APP_SIGN_ID" "$BUILD_APP"
