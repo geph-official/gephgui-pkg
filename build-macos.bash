@@ -6,7 +6,8 @@
 # geph5) — it does NOT depend on any sibling checkout under ~/develop. Run it
 # from anywhere; it locates itself and the repo root.
 #
-# The result, ./output/Geph.pkg, is a distribution package (like Mullvad's) that:
+# The result, ./output/geph-macos-<version>.pkg, is a distribution package
+# (like Mullvad's) that:
 #   - installs /Applications/Geph.app (GUI + the bundled `geph` manager binary),
 #   - registers the manager as a root LaunchDaemon (see macos/pkg-scripts/
 #     postinstall), giving it persistent root across reboots and updates, and
@@ -25,21 +26,30 @@ OUTPUT="$REPO_ROOT/output"
 BUNDLE_ID="io.geph.GephGui"
 APP_NAME="Geph.app"
 
-# Match the current app: an x86_64 build that runs under Rosetta on Apple
-# Silicon. Override TARGET to build natively. CLANG_TARGET is for entrypoint.c.
-TARGET="${TARGET:-x86_64-apple-darwin}"
-CLANG_TARGET="${CLANG_TARGET:-x86_64-apple-darwin}"
+# Build a universal (fat) app: native on both Intel and Apple Silicon. Each
+# binary is built once per arch and lipo'd together. Override for a faster
+# single-arch debug build, e.g. ARCHS="x86_64-apple-darwin".
+ARCHS="${ARCHS:-x86_64-apple-darwin aarch64-apple-darwin}"
 
-# Keep in sync with LSMinimumSystemVersion in template.app/Contents/Info.plist.
-# Without this the binary inherits the build host's SDK as its floor and crashes
-# on launch on older systems; setting it makes the toolchain weak-link
-# newer-than-target symbols and stamp LC_BUILD_VERSION correctly.
-export MACOSX_DEPLOYMENT_TARGET=10.15
+# Per-arch minimum macOS version. arm64 can't go below 11.0 (Apple Silicon
+# debuted on Big Sur); x86_64 keeps 10.15 so old Intel Macs are still served.
+# Matches LSMinimumSystemVersion in template.app/Contents/Info.plist. Setting
+# MACOSX_DEPLOYMENT_TARGET (per-arch, below) makes the toolchain weak-link
+# newer-than-target symbols and stamp LC_BUILD_VERSION correctly; without it the
+# binary inherits the build host's SDK as its floor and crashes on older systems.
+min_os_for() { case "$1" in aarch64-apple-darwin) echo 11.0 ;; *) echo 10.15 ;; esac; }
+
+# clang spells the arm64 arch "arm64", not "aarch64".
+clang_arch_for() { case "$1" in aarch64-*) echo arm64 ;; *) echo x86_64 ;; esac; }
+
+# lipo N inputs into one universal output; plain copy when only one arch is built.
+lipo_or_copy() { local out="$1"; shift; if [ "$#" -eq 1 ]; then cp "$1" "$out"; else lipo -create -output "$out" "$@"; fi; }
 
 VERSION="${VERSION:-$(git -C "$REPO_ROOT" describe --always 2>/dev/null || echo 0.0.0)}"
+ARTIFACT="$OUTPUT/geph-macos-${VERSION#v}.pkg"
 
 # Optional signing/notarization (all no-ops if unset — a local unsigned pkg
-# installs fine via `sudo installer -pkg output/Geph.pkg -target /`):
+# installs fine via `sudo installer -pkg output/geph-macos-<version>.pkg -target /`):
 #   APP_SIGN_ID        "Developer ID Application: ..."   (codesign the app + manager)
 #   INSTALLER_SIGN_ID  "Developer ID Installer: ..."     (sign the .pkg)
 #   NOTARY_PROFILE     notarytool --keychain-profile name (notarize + staple)
@@ -47,7 +57,7 @@ APP_SIGN_ID="${APP_SIGN_ID:-}"
 INSTALLER_SIGN_ID="${INSTALLER_SIGN_ID:-}"
 NOTARY_PROFILE="${NOTARY_PROFILE:-}"
 
-echo ">> building Geph $VERSION for $TARGET"
+echo ">> building Geph $VERSION for $ARCHS"
 
 # ---- 0. submodules + toolchain -------------------------------------------
 
@@ -62,7 +72,7 @@ git -C "$REPO_ROOT" submodule status --recursive 2>/dev/null \
         git -C "$REPO_ROOT" submodule update --init --recursive "$sm"
     done
 
-rustup target add "$TARGET" >/dev/null 2>&1 || true
+for t in $ARCHS; do rustup target add "$t" >/dev/null 2>&1 || true; done
 
 # ---- 1. frontend (embedded into gephgui-wry via rust-embed) ---------------
 
@@ -83,21 +93,38 @@ mkdir -p "$OUTPUT"
 
 rsync -aW --delete "$MACOS_DIR/template.app/" "$BUILD_APP/"
 
+mkdir -p "$CARGO_OUT"
+
+# Each binary is built once per arch (into its own dir / --root) with that arch's
+# deployment target, then lipo'd into a single universal binary.
+
 # entrypoint shim (chdir into the bundle, exec ./bin/gephgui-wry)
-clang -target "$CLANG_TARGET" -mmacosx-version-min="$MACOSX_DEPLOYMENT_TARGET" \
-    -Os -Wall -Wextra -o "$BUILD_APP/Contents/MacOS/entrypoint" "$MACOS_DIR/entrypoint.c"
+ep_inputs=()
+for t in $ARCHS; do
+    clang -arch "$(clang_arch_for "$t")" -mmacosx-version-min="$(min_os_for "$t")" \
+        -Os -Wall -Wextra -o "$CARGO_OUT/entrypoint-$t" "$MACOS_DIR/entrypoint.c"
+    ep_inputs+=("$CARGO_OUT/entrypoint-$t")
+done
+lipo_or_copy "$BUILD_APP/Contents/MacOS/entrypoint" "${ep_inputs[@]}"
 
 # GUI (unprivileged front-end) -> Contents/MacOS/bin
-cargo install --force --locked --target "$TARGET" \
-    --path "$REPO_ROOT/gephgui-wry" --root "$CARGO_OUT/gui"
-cp "$CARGO_OUT/gui/bin/gephgui-wry" "$BUILD_APP/Contents/MacOS/bin"
-
 # Privileged manager (geph5 crate, binary name `geph5`) -> Contents/Resources/geph.
-# The LaunchDaemon plist points here; the CLI subcommands (connect/status/…)
-# are the same binary.
-cargo install --force --locked --target "$TARGET" \
-    --path "$REPO_ROOT/geph5/binaries/geph5-app" --root "$CARGO_OUT/manager"
-cp "$CARGO_OUT/manager/bin/geph5" "$BUILD_APP/Contents/Resources/geph"
+# The LaunchDaemon plist points at the manager; its CLI subcommands
+# (connect/status/…) are the same binary.
+gui_inputs=()
+mgr_inputs=()
+for t in $ARCHS; do
+    export MACOSX_DEPLOYMENT_TARGET="$(min_os_for "$t")"
+    cargo install --force --locked --target "$t" \
+        --path "$REPO_ROOT/gephgui-wry" --root "$CARGO_OUT/gui-$t"
+    cargo install --force --locked --target "$t" \
+        --path "$REPO_ROOT/geph5/binaries/geph5-app" --root "$CARGO_OUT/manager-$t"
+    gui_inputs+=("$CARGO_OUT/gui-$t/bin/gephgui-wry")
+    mgr_inputs+=("$CARGO_OUT/manager-$t/bin/geph5")
+done
+mkdir -p "$BUILD_APP/Contents/MacOS/bin"
+lipo_or_copy "$BUILD_APP/Contents/MacOS/bin/gephgui-wry" "${gui_inputs[@]}"
+lipo_or_copy "$BUILD_APP/Contents/Resources/geph"        "${mgr_inputs[@]}"
 
 # Uninstaller (counterpart of pkg-scripts/postinstall). Ships in the bundle so
 # it matches what was installed. Copy BEFORE codesigning so it's covered by the
@@ -114,7 +141,7 @@ install -m 755 "$MACOS_DIR/uninstall.sh" "$BUILD_APP/Contents/Resources/uninstal
 
 if [ -n "$APP_SIGN_ID" ]; then
     echo ">> codesigning app with '$APP_SIGN_ID'"
-    for f in Contents/Resources/geph Contents/MacOS/bin Contents/MacOS/entrypoint; do
+    for f in Contents/Resources/geph Contents/MacOS/bin/gephgui-wry Contents/MacOS/entrypoint; do
         codesign --force --options runtime --timestamp -s "$APP_SIGN_ID" "$BUILD_APP/$f"
     done
     codesign --force --options runtime --timestamp -s "$APP_SIGN_ID" "$BUILD_APP"
@@ -172,18 +199,18 @@ PRODUCTBUILD_ARGS=(
 )
 [ -n "$INSTALLER_SIGN_ID" ] && PRODUCTBUILD_ARGS+=(--sign "$INSTALLER_SIGN_ID")
 
-productbuild "${PRODUCTBUILD_ARGS[@]}" "$OUTPUT/Geph.pkg"
+productbuild "${PRODUCTBUILD_ARGS[@]}" "$ARTIFACT"
 
 # ---- 7. optional notarize + staple ---------------------------------------
 
 if [ -n "$NOTARY_PROFILE" ]; then
     echo ">> notarizing"
-    xcrun notarytool submit "$OUTPUT/Geph.pkg" --keychain-profile "$NOTARY_PROFILE" --wait
-    xcrun stapler staple "$OUTPUT/Geph.pkg"
+    xcrun notarytool submit "$ARTIFACT" --keychain-profile "$NOTARY_PROFILE" --wait
+    xcrun stapler staple "$ARTIFACT"
 fi
 
 # ---- 8. cleanup intermediates --------------------------------------------
 
 rm -rf "$STAGE" "$CARGO_OUT" "$MACOS_DIR/geph-component.pkg"
 
-echo ">> done: $OUTPUT/Geph.pkg"
+echo ">> done: $ARTIFACT"

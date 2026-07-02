@@ -2,13 +2,14 @@
 #
 # Build the Windows installer on a local Windows build machine (git-bash).
 # Everything comes from this repo's submodules; the result is
-# ./output/geph-windows-setup.exe.
+# ./output/geph-windows-<version>.exe.
 
 set -e
 
 cd "$(dirname "$(readlink -f "$0")")"
 
 export VERSION="${VERSION:-$(git describe --always)}"
+ARTIFACT="output/geph-windows-${VERSION#v}.exe"
 
 STAGE="blobs/win-ia32"
 OUTPUT="output"
@@ -61,7 +62,7 @@ sign "$STAGE/geph5-client.exe"
 
 # --- Compile the installer ---------------------------------------------------
 (cd windows && sh -c "./iscc/ISCC.exe setup.iss")
-cp windows/Output/geph-windows-setup.exe "$OUTPUT/"
-sign "$OUTPUT/geph-windows-setup.exe"
+cp windows/Output/geph-windows-setup.exe "$ARTIFACT"
+sign "$ARTIFACT"
 
-echo ">> done: $OUTPUT/geph-windows-setup.exe"
+echo ">> done: $ARTIFACT"

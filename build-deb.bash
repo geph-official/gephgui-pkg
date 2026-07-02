@@ -2,7 +2,7 @@
 # Build the Debian package inside an Ubuntu 22.04 Docker container, so the
 # resulting .deb links against a predictably old glibc/webkit regardless of the
 # build machine's own distro. The actual build is debian/build-deb-inner.sh,
-# which runs inside the container. Result: ./output/gephgui-wry_<version>_amd64.deb
+# which runs inside the container. Result: ./output/geph-linux-<version>.deb
 
 set -e
 
@@ -69,4 +69,4 @@ docker run --rm -i \
     "
 EOF
 
-echo ">> done: output/gephgui-wry_${VERSION#v}_amd64.deb"
+echo ">> done: output/geph-linux-${VERSION#v}.deb"

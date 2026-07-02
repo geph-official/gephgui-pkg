@@ -22,7 +22,7 @@ jobs:
         run: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-          rustup target add x86_64-apple-darwin
+          rustup target add x86_64-apple-darwin aarch64-apple-darwin
       # Cache Rust dependencies
       # - uses: actions/cache@v3
       #   with:
@@ -45,11 +45,11 @@ jobs:
       - name: Build macOS
         run: |
           export VERSION=$(git describe --always)
-          CARGO_BUILD_TARGET=x86_64-apple-darwin arch -x86_64 ./build-macos.bash
+          ./build-macos.bash
       - uses: actions/upload-artifact@v4
         with:
           name: geph-macos
-          path: output/Geph.pkg
+          path: output/geph-macos-*.pkg
 
   build_flatpak:
     runs-on: ubuntu-24.04
@@ -91,7 +91,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: geph-flatpak
-          path: output/io.geph.GephGui.flatpak
+          path: output/geph-linux-*.flatpak
 
   build_deb_oldubuntu:
     runs-on: ubuntu-24.04
@@ -182,7 +182,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: geph-windows
-          path: output/geph-windows-setup.exe
+          path: output/geph-windows-*.exe
 
   create_github_release:
     runs-on: ubuntu-24.04
@@ -209,8 +209,8 @@ jobs:
           draft: false
           prerelease: true
           files: |
-            ./artifacts/geph-macos/Geph.pkg
-            ./artifacts/geph-flatpak/io.geph.GephGui.flatpak
-            ./artifacts/geph-windows/geph-windows-setup.exe
+            ./artifacts/geph-macos/geph-macos-*.pkg
+            ./artifacts/geph-flatpak/geph-linux-*.flatpak
+            ./artifacts/geph-windows/geph-windows-*.exe
             ${{ steps.find-deb.outputs.DEB_PATH }}
           generate_release_notes: false

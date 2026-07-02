@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build the Flatpak bundle locally. Result: ./output/io.geph.GephGui.flatpak
+# Build the Flatpak bundle locally. Result: ./output/geph-linux-<version>.flatpak
 #
 # Prerequisites on the build machine (Debian/Ubuntu names): flatpak,
 # flatpak-builder, musl-tools, and a rustup-managed Rust toolchain. The GUI
@@ -10,8 +10,9 @@ set -euo pipefail
 
 cd "$(dirname "$(readlink -f "$0")")"
 
-OUTPUT="output"
-mkdir -p "$OUTPUT"
+VERSION="${VERSION:-$(git describe --always)}"
+ARTIFACT="output/geph-linux-${VERSION#v}.flatpak"
+mkdir -p output
 
 # flatpak-builder consumes this checkout via dir sources (including ../.git for
 # `git describe`) and clones submodules over the file protocol.
@@ -31,7 +32,7 @@ cp geph5/target/x86_64-unknown-linux-musl/release/geph5-client blobs/linux-x64/g
 
 flatpak-builder --force-clean --install-deps-from flathub --user \
     build-dir flatpak/io.geph.GephGui.yml --repo=repo
-flatpak build-bundle repo "$OUTPUT/io.geph.GephGui.flatpak" io.geph.GephGui \
+flatpak build-bundle repo "$ARTIFACT" io.geph.GephGui \
     --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
 
-echo ">> done: $OUTPUT/io.geph.GephGui.flatpak"
+echo ">> done: $ARTIFACT"

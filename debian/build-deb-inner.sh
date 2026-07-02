@@ -3,7 +3,7 @@
 # manager (geph5) and engine (geph5-client), and register the manager as a systemd
 # service on install. Runs INSIDE the Ubuntu 22.04 container that the top-level
 # build-deb.bash sets up — run that instead of this directly.
-# Result: ./output/gephgui-wry_<version>_amd64.deb
+# Result: ./output/geph-linux-<version>.deb
 
 set -e
 
@@ -114,7 +114,7 @@ chmod +x "$WORK_DIR/DEBIAN/prerm"
 
 # Build the package
 echo "Building Debian package..."
-PACKAGE_FILE="$OUTPUT/${PACKAGE_NAME}_${VERSION}_${ARCHITECTURE}.deb"
+PACKAGE_FILE="$OUTPUT/geph-linux-${VERSION}.deb"
 dpkg-deb --build "$WORK_DIR" "$PACKAGE_FILE"
 
 echo "Debian package built: $PACKAGE_FILE"

@@ -6,8 +6,27 @@ sdk-extensions:
   - org.freedesktop.Sdk.Extension.node22
 command: "gephgui-wry"
 modules:
+  # libxdo: the tray icon (tray-icon -> muda) links against it, and the GNOME
+  # runtime doesn't ship it. Only the library/header/pc are installed, not the
+  # xdotool binary.
+  - name: libxdo
+    buildsystem: simple
+    build-commands:
+      - make -j$(nproc) PREFIX=/app installlib installheader installpc
+    sources:
+      - type: archive
+        url: https://github.com/jordansissel/xdotool/releases/download/v3.20211022.1/xdotool-3.20211022.1.tar.gz
+        sha256: 96f0facfde6d78eacad35b91b0f46fecd0b35e474c03e00e30da3fdd345f9ada
+  # gephgui-wry and geph5 are staged side-by-side inside the build dir, mirroring
+  # the repo layout, because gephgui-wry's Cargo.toml patches
+  # geph5-broker-protocol via the relative path ../geph5/….
   - name: gephgui-wry
     buildsystem: "simple"
+    build-options:
+      env:
+        # libxdo-sys links -lxdo without consulting pkg-config, so point rustc
+        # at the libxdo we install into /app/lib above.
+        RUSTFLAGS: "-L /app/lib"
     build-commands:
       - |
         if [ -d .pkg-git ]; then
@@ -16,7 +35,7 @@ modules:
           VERSION="dev"
         fi
         printf "%s" "$VERSION" > .version
-      - "export VERSION=$(cat .version) && (cd gephgui && npm i -f && npm run build)"
+      - "export VERSION=$(cat .version) && (cd gephgui-wry/gephgui && npm i -f && npm run build)"
       - |
         export VERSION="$(cat .version)"
         export CARGO_HOME=/run/build/gephgui-wry/cargo
@@ -26,11 +45,25 @@ modules:
         curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal --default-toolchain 1.94.1
         rustc --version
         cargo --version
-        cargo build --release --locked
-      - "install -D ./target/release/gephgui-wry -t /app/bin"
+        (cd gephgui-wry && cargo build --release --locked)
+      - "install -D ./gephgui-wry/target/release/gephgui-wry -t /app/bin"
     sources:
+      # Skip host build artifacts: flatpak-builder's copy strips exec bits, so a
+      # copied-in node_modules leaves .bin shims non-executable (npm i then sees
+      # an up-to-date tree and never fixes them), and copying target/ drags the
+      # host's entire cargo output into every build for nothing.
       - type: dir
         path: "../gephgui-wry"
+        dest: "gephgui-wry"
+        skip:
+          - target
+          - gephgui/node_modules
+          - gephgui/dist
+      - type: dir
+        path: "../geph5"
+        dest: "geph5"
+        skip:
+          - target
       - type: dir
         path: "../.git"
         dest: ".pkg-git"
@@ -71,6 +104,11 @@ modules:
     buildsystem: meson
     config-opts:
       - -Dmanpage=false
+    # The installed help tree contains dangling symlinks (translated pages
+    # linking to untranslated ones), which break flatpak-builder's cache
+    # commit — and we only need the zenity binary anyway.
+    post-install:
+      - rm -rf /app/share/help
     sources:
       - type: archive
         url: https://download.gnome.org/sources/zenity/4.0/zenity-4.0.5.tar.xz
