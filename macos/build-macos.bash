@@ -1,8 +1,9 @@
 #!/bin/bash
 
 rsync -aW --delete template.app/ build.app/
-cargo install --locked --target x86_64-apple-darwin --path ../gephgui-wry
-cp $(which gephgui-wry) build.app/Contents/MacOS/bin
+cargo install cargo-bundle
+cargo bundle
+cp ../target/debug/bundle/osx/Geph.app build.app/Contents/MacOS/bin
 
 mkdir dist
 mv build.app dist/Geph.app
