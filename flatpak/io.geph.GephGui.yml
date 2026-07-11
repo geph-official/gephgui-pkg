@@ -3,33 +3,138 @@ runtime: org.gnome.Platform
 runtime-version: "47"
 sdk: org.gnome.Sdk
 sdk-extensions:
-  - org.freedesktop.Sdk.Extension.rust-stable
   - org.freedesktop.Sdk.Extension.node22
 command: "gephgui-wry"
 modules:
-  - shared-modules/dbus-glib/dbus-glib-0.110.json
+  # The tray icon dlopens lib(ayatana-)appindicator3 at runtime, which the GNOME
+  # runtime doesn't ship; bundle flathub's shared module (which brings its own
+  # libdbusmenu etc.).
   - shared-modules/libappindicator/libappindicator-gtk3-12.10.json
+  # libxdo: the tray icon (tray-icon -> muda) links against it, and the GNOME
+  # runtime doesn't ship it. Only the library/header/pc are installed, not the
+  # xdotool binary.
+  - name: libxdo
+    buildsystem: simple
+    build-commands:
+      - make -j$(nproc) PREFIX=/app installlib installheader installpc
+    sources:
+      - type: archive
+        url: https://github.com/jordansissel/xdotool/releases/download/v3.20211022.1/xdotool-3.20211022.1.tar.gz
+        sha256: 96f0facfde6d78eacad35b91b0f46fecd0b35e474c03e00e30da3fdd345f9ada
+  # gephgui-wry and geph5 are staged side-by-side inside the build dir, mirroring
+  # the repo layout, because gephgui-wry's Cargo.toml patches
+  # geph5-broker-protocol via the relative path ../geph5/….
   - name: gephgui-wry
     buildsystem: "simple"
+    build-options:
+      env:
+        # libxdo-sys links -lxdo without consulting pkg-config, so point rustc
+        # at the libxdo we install into /app/lib above.
+        RUSTFLAGS: "-L /app/lib"
+      # This module is a permanent cache miss: its dir sources (gephgui-wry,
+      # geph5, .git) change on every commit, so flatpak-builder rebuilds it from
+      # an empty sandbox each time. Mount a persistent host cache dir so the
+      # rebuild reuses the rustup toolchain, the cargo registry, the target/
+      # tree (incremental compile), and the npm cache instead of re-downloading
+      # and recompiling everything from scratch. Requires network, which we
+      # already share for the live rustup/npm/cargo fetches.
+      build-args:
+        - --share=network
+        - --filesystem=/var/tmp/geph-flatpak-cache
     build-commands:
-      - "git submodule update --init --recursive"
-      - "git checkout `(cd ../gephgui-wry && git log --format='%H' -n 1)`"
-      - "(cd gephgui && npm i -f && npm run build)"
-      - "env CARGO_HOME=/run/build/gephgui-wry/cargo cargo build --release"
-      - "install -D ./target/release/gephgui-wry -t /app/bin"
+      - |
+        if [ -d .pkg-git ]; then
+          VERSION=$(git --git-dir=.pkg-git describe --always 2>/dev/null || git --git-dir=.pkg-git rev-parse --short HEAD)
+        else
+          VERSION="dev"
+        fi
+        printf "%s" "$VERSION" > .version
+      - |
+        export VERSION="$(cat .version)"
+        export npm_config_cache=/var/tmp/geph-flatpak-cache/npm
+        (cd gephgui-wry/gephgui && npm i -f && npm run build)
+      - |
+        export VERSION="$(cat .version)"
+        CACHE=/var/tmp/geph-flatpak-cache
+        export CARGO_HOME="$CACHE/cargo"
+        export RUSTUP_HOME="$CACHE/rustup"
+        export CARGO_TARGET_DIR="$CACHE/target"
+        export PATH="$CARGO_HOME/bin:$PATH"
+        export RUSTUP_INIT_SKIP_PATH_CHECK=yes
+        # Only install the toolchain when it isn't already in the cached RUSTUP_HOME.
+        if ! command -v rustup >/dev/null 2>&1; then
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal --default-toolchain 1.94.1
+        fi
+        rustc --version
+        cargo --version
+        (cd gephgui-wry && cargo build --release --locked)
+        install -D "$CARGO_TARGET_DIR/release/gephgui-wry" -t /app/bin
     sources:
-      - type: git
-        url: "https://github.com/geph-official/gephgui-wry.git"
-        branch: master
-  - name: blobs
+      # Skip host build artifacts: flatpak-builder's copy strips exec bits, so a
+      # copied-in node_modules leaves .bin shims non-executable (npm i then sees
+      # an up-to-date tree and never fixes them), and copying target/ drags the
+      # host's entire cargo output into every build for nothing.
+      - type: dir
+        path: "../gephgui-wry"
+        dest: "gephgui-wry"
+        skip:
+          - target
+          - gephgui/node_modules
+          - gephgui/dist
+      - type: dir
+        path: "../geph5"
+        dest: "geph5"
+        skip:
+          - target
+      - type: dir
+        path: "../.git"
+        dest: ".pkg-git"
+  # The privileged host manager cannot run inside the sandbox, so we bundle a
+  # host-runnable (statically linked, musl) build of geph5 + geph5-client. The
+  # startup bootstrap (gephgui-wry/src/bootstrap.rs) stages these out to the host
+  # and installs them there via pkexec. CI produces these blobs (see build.yaml).
+  - name: host-manager-bin
     buildsystem: "simple"
     build-commands:
-      - "install -D pac-real -t /app/bin"
-      - "install -D pac -t /app/bin"
-      - "install -D pkexec -t /app/bin"
+      - "install -D -m755 geph5 -t /app/bin"
+      - "install -D -m755 geph5-client -t /app/bin"
     sources:
       - type: dir
         path: "../blobs/linux-x64"
+  # Packaging-owned privileged installer + self-cleanup watchdog assets, staged out
+  # to the host by the bootstrap. geph5 itself stays unaware of any of this.
+  - name: host-manager-assets
+    buildsystem: "simple"
+    build-commands:
+      - "install -D -m755 install-host-manager.sh /app/libexec/geph/install-host-manager.sh"
+      - "install -D -m755 geph-flatpak-watchdog.sh /app/libexec/geph/geph-flatpak-watchdog.sh"
+      - "install -D -m644 geph-cleanup.service /app/libexec/geph/geph-cleanup.service"
+      - "install -D -m644 geph-cleanup.timer /app/libexec/geph/geph-cleanup.timer"
+    sources:
+      - type: file
+        path: "install-host-manager.sh"
+      - type: file
+        path: "geph-flatpak-watchdog.sh"
+      - type: file
+        path: "geph-cleanup.service"
+      - type: file
+        path: "geph-cleanup.timer"
+  # rfd (our native dialog library) shells out to `zenity` for message dialogs, and
+  # the GNOME runtime does not ship it, so build it into the sandbox. -Dmanpage=false
+  # avoids the help2man build dependency; webkitgtk is off by default.
+  - name: zenity
+    buildsystem: meson
+    config-opts:
+      - -Dmanpage=false
+    # The installed help tree contains dangling symlinks (translated pages
+    # linking to untranslated ones), which break flatpak-builder's cache
+    # commit — and we only need the zenity binary anyway.
+    post-install:
+      - rm -rf /app/share/help
+    sources:
+      - type: archive
+        url: https://download.gnome.org/sources/zenity/4.0/zenity-4.0.5.tar.xz
+        sha256: 8a3ffe7751bed497a758229ece07be9114ad4e46a066abae4e5f31d6da4c0e9e
   - name: icons
     buildsystem: "simple"
     sources:
@@ -41,7 +146,7 @@ modules:
       - "mkdir -p /app/share/applications"
       - "cp io.geph.GephGui.desktop /app/share/applications"
 build-options:
-  append-path: "/usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/node22/bin"
+  append-path: "/usr/lib/sdk/node22/bin"
   build-args:
     - --share=network
 finish-args:
@@ -50,12 +155,15 @@ finish-args:
   - --socket=x11
   # Wayland access
   - --socket=wayland
-  # Needs to talk to the network:
+  # Needs to talk to the network (also gives loopback access to the engine):
   - --share=network
   # Needed for OpenGL
   - --device=dri
-  # DConf access for configuring proxies
-  - --filesystem=host:rw
-  - --talk-name=ca.desrt.dconf
+  # Reach the privileged manager's control socket on the host. The manager binds it
+  # 0666; we only need to connect, so read-only is enough. The bind-mount appears
+  # once /run/geph exists at launch (the bootstrap relaunches on first install).
+  - --filesystem=/run/geph:ro
+  # Run the host-side installer/uninstaller via `flatpak-spawn --host pkexec`.
   - --talk-name=org.freedesktop.Flatpak
-  - --env=DCONF_USER_CONFIG_DIR=.config/dconf
+  # Register the tray icon (StatusNotifierItem) with the host's tray daemon.
+  - --talk-name=org.kde.StatusNotifierWatcher

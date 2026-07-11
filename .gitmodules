@@ -7,3 +7,7 @@
 [submodule "flatpak/shared-modules"]
 	path = flatpak/shared-modules
 	url = https://github.com/flathub/shared-modules.git
+[submodule "geph5"]
+	path = geph5
+	url = https://github.com/geph-official/geph5.git
+	branch = vpn-by-default

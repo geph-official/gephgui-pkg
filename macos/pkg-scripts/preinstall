@@ -1,0 +1,14 @@
+#!/bin/bash
+#
+# Runs as root before the payload is written. On an upgrade, stop the currently
+# running manager so its binary can be replaced cleanly (macOS lets you unlink a
+# running Mach-O, but stopping first avoids the old code lingering until the
+# postinstall kickstart). No-op on a first install.
+
+set -e
+
+launchctl bootout system/io.geph.manager 2>/dev/null || true
+# Also boot out the pre-rename label, in case an older dev build is installed.
+launchctl bootout system/io.geph.daemon 2>/dev/null || true
+
+exit 0

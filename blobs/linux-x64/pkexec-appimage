@@ -1,7 +1,0 @@
-#!/bin/bash
-
-mkdir -p ~/.geph-blobs
-cp $(which gephgui-wry) ~/.geph-blobs
-export PATH=$PATH:~/.geph-blobs
-echo $@
-pkexec ~/.geph-blobs/gephgui-wry ${@: 2}

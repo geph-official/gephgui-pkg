@@ -1,3 +1,8 @@
 build.app
 dist
 *.dmg
+pkgroot
+cargo-out
+geph-component.pkg
+distribution.xml
+geph-macos.zip
