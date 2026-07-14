@@ -70,7 +70,10 @@ ARTIFACT="$OUTPUT/geph-macos-${VERSION#v}.pkg"
 #     if the Developer ID Installer cert is present we assume the profile exists too
 #     (both are set up together on a real signing machine; CI has neither).
 NOTARY_PROFILE_NAME="geph-notary"
-find_identity() { security find-identity -v -p basic 2>/dev/null | grep -o "\"$1: [^\"]*\"" | head -1 | tr -d '"'; }
+# The `|| true` keeps "no identity found" from being fatal: grep exits 1 on no
+# match, pipefail propagates it, and a failing assignment kills the script
+# under `set -e` before anything is printed.
+find_identity() { security find-identity -v -p basic 2>/dev/null | grep -o "\"$1: [^\"]*\"" | head -1 | tr -d '"' || true; }
 APP_SIGN_ID="${APP_SIGN_ID:-$(find_identity 'Developer ID Application')}"
 INSTALLER_SIGN_ID="${INSTALLER_SIGN_ID:-$(find_identity 'Developer ID Installer')}"
 if [ -z "${NOTARY_PROFILE:-}" ] && [ -n "$INSTALLER_SIGN_ID" ]; then
