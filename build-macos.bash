@@ -150,7 +150,8 @@ for t in $ARCHS; do
     cargo install --force --locked --target "$t" \
         --path "$REPO_ROOT/geph5/binaries/geph5-app" --root "$CARGO_OUT/manager-$t"
     cargo install --force --locked --target "$t" \
-        --path "$REPO_ROOT/geph5/binaries/geph5-client" --root "$CARGO_OUT/engine-$t"
+        --path "$REPO_ROOT/geph5/binaries/geph5-client" --root "$CARGO_OUT/engine-$t" \
+        --features aws_lambda
     gui_inputs+=("$CARGO_OUT/gui-$t/bin/gephgui-wry")
     mgr_inputs+=("$CARGO_OUT/manager-$t/bin/geph5")
     engine_inputs+=("$CARGO_OUT/engine-$t/bin/geph5-client")

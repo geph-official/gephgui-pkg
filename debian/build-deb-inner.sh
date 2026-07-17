@@ -73,7 +73,7 @@ cd ..
 # submodule and install both side-by-side (geph5 resolves geph5-client as a sibling
 # of its own executable).
 echo "Building geph5 manager + engine..."
-( cd geph5 && cargo build --locked --release -p geph5-app -p geph5-client )
+( cd geph5 && cargo build --locked --release -p geph5-app -p geph5-client --features geph5-client/aws_lambda )
 cp geph5/target/release/geph5 "$WORK_DIR/usr/bin/"
 cp geph5/target/release/geph5-client "$WORK_DIR/usr/bin/"
 

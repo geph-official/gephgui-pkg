@@ -44,7 +44,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 # stages out to the host. Build them into blobs/linux-x64 before the manifest's
 # `host-manager-bin` module consumes them.
 rustup target add x86_64-unknown-linux-musl
-( cd geph5 && cargo build --locked --release --target x86_64-unknown-linux-musl -p geph5-app -p geph5-client )
+( cd geph5 && cargo build --locked --release --target x86_64-unknown-linux-musl -p geph5-app -p geph5-client --features geph5-client/aws_lambda )
 mkdir -p blobs/linux-x64
 cp geph5/target/x86_64-unknown-linux-musl/release/geph5 blobs/linux-x64/geph5
 cp geph5/target/x86_64-unknown-linux-musl/release/geph5-client blobs/linux-x64/geph5-client

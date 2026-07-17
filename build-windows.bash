@@ -47,7 +47,7 @@ sign "$STAGE/gephgui-wry.exe"
 # geph5-client.exe as a sibling in its own directory (see geph5-app
 # `supervisor::engine_bin_path`), so both binaries must land in the same {app}
 # directory the installer writes to.
-(cd geph5 && cargo build --locked --release --target "$TARGET" -p geph5-app -p geph5-client)
+(cd geph5 && cargo build --locked --release --target "$TARGET" -p geph5-app -p geph5-client --features geph5-client/aws_lambda)
 GEPH5_BIN="geph5/target/$TARGET/release"
 cp "$GEPH5_BIN/geph5.exe"        "$STAGE/"
 cp "$GEPH5_BIN/geph5-client.exe" "$STAGE/"
