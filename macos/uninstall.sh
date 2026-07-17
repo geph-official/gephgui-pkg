@@ -15,6 +15,7 @@ set -u
 
 LABEL="io.geph.manager"
 PLIST="/Library/LaunchDaemons/${LABEL}.plist"
+MANAGER_BIN="/Applications/Geph.app/Contents/Resources/geph"
 BUNDLE_ID="io.geph.GephGui"
 
 if [ "$(id -u)" -ne 0 ]; then
@@ -23,7 +24,12 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 echo "[geph] stopping and unregistering the manager..."
+if [ -x "$MANAGER_BIN" ]; then
+    "$MANAGER_BIN" unregister-manager 2>/dev/null || true
+fi
+# Legacy fallback for versions whose manager did not own launchd registration.
 launchctl bootout "system/${LABEL}" 2>/dev/null || launchctl bootout system "$PLIST" 2>/dev/null || true
+launchctl bootout system/io.geph.daemon 2>/dev/null || true
 rm -f "$PLIST"
 
 echo "[geph] removing the _geph service user..."
