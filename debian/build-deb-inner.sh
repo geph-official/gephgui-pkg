@@ -11,6 +11,11 @@ set -e
 # output/) is relative to the repo root, so cd there.
 cd "$(dirname "$(readlink -f "$0")")/.."
 
+# Machine-local staging/caching helpers. The checkout (/app) may be shared with
+# other build machines, so nothing below builds in it directly: sources are
+# staged into $LOCAL_SRC (under /cache, see build-deb.bash) and compiled there.
+. ./build-common.bash
+
 # Get version using git describe
 PACKAGE_NAME="gephgui-wry"
 ARCHITECTURE="amd64"
@@ -24,7 +29,7 @@ mkdir -p "$OUTPUT"
 
 # Create temporary working directory
 WORK_DIR=$(mktemp -d)
-trap 'rm -rf "$WORK_DIR"' EXIT
+trap 'rm -rf "$WORK_DIR" "$WORK_DIR.deb"' EXIT
 
 # Create Debian package structure
 mkdir -p "$WORK_DIR/DEBIAN"
@@ -46,36 +51,36 @@ Description: Geph GUI using WRY
  This package contains the GUI client built with WRY.
 EOF
 
-# Update submodules
-git submodule update --init --recursive
+# Initialize only submodules that are missing (uninitialized ones are prefixed
+# with '-' in `submodule status`). Deliberately do NOT `update` populated ones:
+# that would hard-reset them to the pinned commit — clobbering in-tree dev work
+# and racing other build machines that are reading the same shared checkout.
+git submodule status --recursive 2>/dev/null \
+    | awk '/^-/ {print $2}' \
+    | while read -r sm; do
+        echo ">> initializing missing submodule: $sm"
+        git submodule update --init --recursive "$sm"
+    done
 
-# Build the gephgui-wry binary
-echo "Building gephgui-wry..."
-cd gephgui-wry
-
-# Build the frontend. Wipe any host-installed node_modules first: it may have
-# been populated on the host (e.g. on a filesystem that drops the exec bit),
-# which leaves node_modules/.bin/vite non-executable inside the container.
-cd gephgui
-rm -rf node_modules
-npm install -f
-npm run build
-cd ..
+# Stage sources into the machine-local build root and build there. npm installs
+# into the staged copy on a container-local filesystem, which also sidesteps
+# the old problem of host-populated node_modules losing the exec bit on
+# node_modules/.bin/vite.
+stage_sources
+build_frontend
 
 # Build the Rust backend
-cargo build --locked --release
-
-# Copy the built binary to the package directory
-cp target/release/gephgui-wry "$WORK_DIR/usr/bin/"
-cd ..
+echo "Building gephgui-wry..."
+( cd "$LOCAL_SRC/gephgui-wry" && cargo build --locked --release )
+cp "$CARGO_TARGET_DIR/release/gephgui-wry" "$WORK_DIR/usr/bin/"
 
 # Build the privileged manager (geph5) and engine (geph5-client) from the geph5
 # submodule and install both side-by-side (geph5 resolves geph5-client as a sibling
 # of its own executable).
 echo "Building geph5 manager + engine..."
-( cd geph5 && cargo build --locked --release -p geph5-app -p geph5-client --features geph5-client/aws_lambda )
-cp geph5/target/release/geph5 "$WORK_DIR/usr/bin/"
-cp geph5/target/release/geph5-client "$WORK_DIR/usr/bin/"
+( cd "$LOCAL_SRC/geph5" && cargo build --locked --release -p geph5-app -p geph5-client --features geph5-client/aws_lambda )
+cp "$CARGO_TARGET_DIR/release/geph5" "$WORK_DIR/usr/bin/"
+cp "$CARGO_TARGET_DIR/release/geph5-client" "$WORK_DIR/usr/bin/"
 
 # Create desktop file
 cat > "$WORK_DIR/usr/share/applications/geph.desktop" << EOF
@@ -117,9 +122,12 @@ fi
 EOF
 chmod +x "$WORK_DIR/DEBIAN/prerm"
 
-# Build the package
+# Build the package into a local temp file, then publish it into the shared
+# output/ via rename so other machines never sync a half-written .deb.
 echo "Building Debian package..."
 PACKAGE_FILE="$OUTPUT/geph-linux-${VERSION}.deb"
-dpkg-deb --build "$WORK_DIR" "$PACKAGE_FILE"
+dpkg-deb --build "$WORK_DIR" "$WORK_DIR.deb"
+publish "$WORK_DIR.deb" "$PACKAGE_FILE"
+rm -f "$WORK_DIR.deb"
 
 echo "Debian package built: $PACKAGE_FILE"

@@ -70,13 +70,17 @@ jobs:
         run: |
           export VERSION=$(git describe --always)
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-      # Cache Flatpak build
+      # Cache Flatpak build. Build state now lives in machine-local dirs (see
+      # build-common.bash): ~/.cache/gephgui-pkg holds the host-side staging +
+      # cargo target and the flatpak-builder state/repo; /var/tmp/geph-flatpak-cache
+      # is the in-sandbox rustup/cargo/npm cache the manifest mounts.
       - uses: actions/cache@v3
         with:
           path: |
             ~/.local/share/flatpak
             ~/.cache/flatpak
-            repo/
+            ~/.cache/gephgui-pkg
+            /var/tmp/geph-flatpak-cache
           key: ${{ runner.os }}-flatpak-${{ hashFiles('flatpak/io.geph.GephGui.yml') }}
           restore-keys: |
             ${{ runner.os }}-flatpak-
@@ -102,25 +106,13 @@ jobs:
           fetch-depth: 0
       - name: Fetch all tags
         run: git fetch --tags --force
-      # Cache Rust dependencies
+      # Cache the machine-local build root the containerized build writes to
+      # (staged sources, cargo target, rustup/cargo homes, npm cache — see
+      # build-deb.bash, which mounts it at /cache).
       - uses: actions/cache@v3
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-oldubuntu-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-oldubuntu-
-      # Cache build dependencies
-      - uses: actions/cache@v3
-        with:
-          path: |
-            debian/.cargo
-            debian/build-cache
-          key: ${{ runner.os }}-deb-oldubuntu-${{ hashFiles('debian/**/*') }}
+          path: /var/tmp/geph-deb-cache
+          key: ${{ runner.os }}-deb-oldubuntu-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-deb-oldubuntu-
       # Builds inside an Ubuntu 22.04 container for a predictably old glibc.
@@ -153,7 +145,8 @@ jobs:
           curl https://win.rustup.rs/ -o rustup-init.exe
           ./rustup-init -y --default-toolchain "stable-i686-pc-windows-msvc" --profile minimal
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-      # Cache Rust dependencies
+      # Cache Rust dependencies. The cargo target dir now lives in the
+      # machine-local build root ~/.cache/gephgui-pkg (see build-common.bash).
       - uses: actions/cache@v3
         with:
           path: |
@@ -161,15 +154,15 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            target/
-            geph5/target/
+            ~/.cache/gephgui-pkg/target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
-      # Cache NPM dependencies
+      # Cache NPM dependencies (installed into the staged copy of the frontend
+      # under the machine-local build root).
       - uses: actions/cache@v3
         with:
-          path: gephgui-wry/gephgui/node_modules
+          path: ~/.cache/gephgui-pkg/src/gephgui-wry/gephgui/node_modules
           key: ${{ runner.os }}-npm-${{ hashFiles('gephgui-wry/gephgui/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-npm-

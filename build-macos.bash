@@ -6,6 +6,10 @@
 # geph5) — it does NOT depend on any sibling checkout under ~/develop. Run it
 # from anywhere; it locates itself and the repo root.
 #
+# All build work happens in a machine-local staging area (see build-common.bash)
+# so this checkout can be shared with the Windows/Linux build machines
+# (Syncthing, NFS, ...) and the per-OS builds can run concurrently.
+#
 # The result, ./output/geph-macos-<version>.pkg, is a distribution package
 # (like Mullvad's) that:
 #   - installs /Applications/Geph.app (GUI + the bundled `geph` manager binary),
@@ -18,7 +22,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 REPO_ROOT="$PWD"
+. ./build-common.bash
 MACOS_DIR="$REPO_ROOT/macos"
+LOCAL_MACOS="$LOCAL_BUILD_ROOT/macos"
 OUTPUT="$REPO_ROOT/output"
 
 # ---- config ---------------------------------------------------------------
@@ -100,22 +106,26 @@ git -C "$REPO_ROOT" submodule status --recursive 2>/dev/null \
 
 for t in $ARCHS; do rustup target add "$t" >/dev/null 2>&1 || true; done
 
-# ---- 1. frontend (embedded into gephgui-wry via rust-embed) ---------------
+# ---- 1. stage sources + frontend (embedded into gephgui-wry via rust-embed)
 
-pushd "$REPO_ROOT/gephgui-wry/gephgui" >/dev/null
-npm i -f
-npm run build
-popd >/dev/null
+# Copies gephgui-wry + geph5 into the machine-local build root; npm runs in the
+# staged copy so node_modules/dist never land in the (possibly shared) checkout.
+stage_sources
+build_frontend
 
 # ---- 2. clean workspace ---------------------------------------------------
 
-BUILD_APP="$MACOS_DIR/build.app"
-STAGE="$MACOS_DIR/pkgroot"        # what pkgbuild installs under /
-CARGO_OUT="$MACOS_DIR/cargo-out"  # cargo install --root target (kept out of ~/.cargo/bin)
-rm -rf "$BUILD_APP" "$STAGE" "$CARGO_OUT" "$MACOS_DIR/geph-component.pkg"
-mkdir -p "$OUTPUT"
+BUILD_APP="$LOCAL_MACOS/build.app"
+STAGE="$LOCAL_MACOS/pkgroot"        # what pkgbuild installs under /
+CARGO_OUT="$LOCAL_MACOS/cargo-out"  # cargo install --root target (kept out of ~/.cargo/bin)
+rm -rf "$BUILD_APP" "$STAGE" "$CARGO_OUT" "$LOCAL_MACOS/geph-component.pkg"
+mkdir -p "$OUTPUT" "$LOCAL_MACOS"
 # Drop stale macOS artifacts so output/ only ever holds the latest pkg per OS.
 rm -f "$OUTPUT"/geph-macos-*.pkg
+# Scrub intermediates that older versions of this script left in the shared
+# checkout (all build junk), so they stop syncing to the other machines.
+rm -rf "$MACOS_DIR/build.app" "$MACOS_DIR/pkgroot" "$MACOS_DIR/cargo-out" \
+    "$MACOS_DIR/geph-component.pkg" "$MACOS_DIR/distribution.xml"
 
 # ---- 3. assemble the app bundle ------------------------------------------
 
@@ -146,11 +156,11 @@ engine_inputs=()
 for t in $ARCHS; do
     export MACOSX_DEPLOYMENT_TARGET="$(min_os_for "$t")"
     cargo install --force --locked --target "$t" \
-        --path "$REPO_ROOT/gephgui-wry" --root "$CARGO_OUT/gui-$t"
+        --path "$LOCAL_SRC/gephgui-wry" --root "$CARGO_OUT/gui-$t"
     cargo install --force --locked --target "$t" \
-        --path "$REPO_ROOT/geph5/binaries/geph5-app" --root "$CARGO_OUT/manager-$t"
+        --path "$LOCAL_SRC/geph5/binaries/geph5-app" --root "$CARGO_OUT/manager-$t"
     cargo install --force --locked --target "$t" \
-        --path "$REPO_ROOT/geph5/binaries/geph5-client" --root "$CARGO_OUT/engine-$t" \
+        --path "$LOCAL_SRC/geph5/binaries/geph5-client" --root "$CARGO_OUT/engine-$t" \
         --features aws_lambda
     gui_inputs+=("$CARGO_OUT/gui-$t/bin/gephgui-wry")
     mgr_inputs+=("$CARGO_OUT/manager-$t/bin/geph5")
@@ -195,11 +205,11 @@ pkgbuild \
     --version "$VERSION" \
     --install-location "/" \
     --ownership recommended \
-    "$MACOS_DIR/geph-component.pkg"
+    "$LOCAL_MACOS/geph-component.pkg"
 
 # ---- 6. distribution pkg (adds title + the install-size display) ----------
 
-DIST_XML="$MACOS_DIR/distribution.xml"
+DIST_XML="$LOCAL_MACOS/distribution.xml"
 cat > "$DIST_XML" <<XML_EOF
 <?xml version="1.0" encoding="utf-8"?>
 <installer-gui-script minSpecVersion="1">
@@ -228,25 +238,31 @@ cat > "$DIST_XML" <<XML_EOF
 </installer-gui-script>
 XML_EOF
 
+# Build the pkg locally; it is published into output/ only after the optional
+# notarize + staple, so the shared folder never sees an intermediate version.
+LOCAL_ARTIFACT="$LOCAL_MACOS/$(basename "$ARTIFACT")"
+
 PRODUCTBUILD_ARGS=(
     --distribution "$DIST_XML"
-    --package-path "$MACOS_DIR"
+    --package-path "$LOCAL_MACOS"
     --resources "$MACOS_DIR/resources"
 )
 [ -n "$INSTALLER_SIGN_ID" ] && PRODUCTBUILD_ARGS+=(--sign "$INSTALLER_SIGN_ID")
 
-productbuild "${PRODUCTBUILD_ARGS[@]}" "$ARTIFACT"
+productbuild "${PRODUCTBUILD_ARGS[@]}" "$LOCAL_ARTIFACT"
 
 # ---- 7. optional notarize + staple ---------------------------------------
 
 if [ -n "$NOTARY_PROFILE" ]; then
     echo ">> notarizing"
-    xcrun notarytool submit "$ARTIFACT" --keychain-profile "$NOTARY_PROFILE" --wait
-    xcrun stapler staple "$ARTIFACT"
+    xcrun notarytool submit "$LOCAL_ARTIFACT" --keychain-profile "$NOTARY_PROFILE" --wait
+    xcrun stapler staple "$LOCAL_ARTIFACT"
 fi
+
+publish "$LOCAL_ARTIFACT" "$ARTIFACT"
 
 # ---- 8. cleanup intermediates --------------------------------------------
 
-rm -rf "$STAGE" "$CARGO_OUT" "$MACOS_DIR/geph-component.pkg"
+rm -rf "$STAGE" "$CARGO_OUT" "$LOCAL_MACOS/geph-component.pkg" "$LOCAL_ARTIFACT"
 
 echo ">> done: $ARTIFACT"
