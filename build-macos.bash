@@ -131,6 +131,13 @@ rm -rf "$MACOS_DIR/build.app" "$MACOS_DIR/pkgroot" "$MACOS_DIR/cargo-out" \
 
 rsync -aW --delete "$MACOS_DIR/template.app/" "$BUILD_APP/"
 
+# Stamp the real version into the bundle: the template's Info.plist carries a
+# stale hardcoded CFBundleShortVersionString/CFBundleVersion (LaunchServices,
+# Finder's Get Info and crash reports would all report it otherwise). Apple
+# wants these numeric, so strip the leading "v" from git describe.
+plutil -replace CFBundleShortVersionString -string "${VERSION#v}" "$BUILD_APP/Contents/Info.plist"
+plutil -replace CFBundleVersion            -string "${VERSION#v}" "$BUILD_APP/Contents/Info.plist"
+
 mkdir -p "$CARGO_OUT"
 
 # Each binary is built once per arch (into its own dir / --root) with that arch's
