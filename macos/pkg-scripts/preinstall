@@ -11,4 +11,19 @@ launchctl bootout system/io.geph.manager 2>/dev/null || true
 # Also boot out the pre-rename label, in case an older dev build is installed.
 launchctl bootout system/io.geph.daemon 2>/dev/null || true
 
+# Quit any running GUI too: replacing the bundle under a live gephgui-wry can
+# invalidate the code signature its WKWebView helper processes are spawned
+# under (blank window), and the survivor would keep holding the port-5678
+# single-instance lock, bouncing every fresh launch back to the broken
+# instance.
+pkill -x gephgui-wry 2>/dev/null || true
+
+# Kill any leftover engine processes. The manager booted out above is the only
+# thing that legitimately runs geph5-client, so anything still alive here is a
+# stray: a 5.7.x-era (.dmg) client spawned directly by the old GUI, or an
+# orphan from a killed manager. Survivors keep the proxy ports (9909/9910/12223)
+# bound, which makes every post-upgrade connect die with "address already in
+# use".
+pkill -x geph5-client 2>/dev/null || true
+
 exit 0

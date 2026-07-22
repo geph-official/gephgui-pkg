@@ -14,6 +14,13 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
+; Numeric version-info quad (VersionInfoVersion accepts only digits and dots;
+; VERSION may look like "v5.8.0" or a git describe). Set by build-windows.bash.
+#define NumVer GetEnv("VERSION_NUM")
+#if NumVer == ""
+#define NumVer "0.0.0.0"
+#endif
+VersionInfoVersion={#NumVer}
 DefaultDirName={pf}\{cm:MyAppName}
 DefaultGroupName={cm:MyAppName}
 OutputBaseFilename=geph-windows-setup

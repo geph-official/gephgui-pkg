@@ -45,10 +45,47 @@ TARGET="i686-pc-windows-msvc"
 rustup target add "$TARGET"
 
 # --- Code-signing hook -------------------------------------------------------
-# No Authenticode certificate is wired up yet (out of scope for now). `sign` is a
-# no-op today; drop a `signtool sign ...` invocation in here later to sign each
-# exe and the final installer without restructuring this script.
-sign() { :; }
+# Authenticode signing via Azure Trusted Signing (signtool + Microsoft's
+# Azure.CodeSigning "dlib" client). Certificates come from the cloud per
+# windows/trusted-signing.json; authentication is the build machine's `az login`
+# session (needs the "Trusted Signing Certificate Profile Signer" role). See
+# "Windows code signing" in CLAUDE.md for the one-time machine setup.
+#
+# The /tr timestamp is load-bearing, not a nicety: Trusted Signing certs expire
+# after ~3 days, and only the RFC3161 countersignature keeps already-shipped
+# binaries valid past that.
+#
+# When the tooling is absent or trusted-signing.json still has placeholders,
+# `sign` degrades to a warning no-op so CI and dev machines keep producing
+# unsigned builds (same graceful degradation as build-macos.bash). A failure of
+# an *attempted* signature still aborts the build via set -e — a half-signed
+# release is worse than an unsigned one.
+TSCT="/c/Program Files/Trusted Signing Client Tools"
+if [ -z "${SIGNTOOL:-}" ]; then
+    # Prefer the signtool bundled with the Trusted Signing Client Tools MSI
+    # (guaranteed new enough for /dlib); else the newest Windows SDK one.
+    SIGNTOOL="$(find "$TSCT" -name signtool.exe 2>/dev/null | head -1)"
+    [ -n "$SIGNTOOL" ] || SIGNTOOL="$(ls "/c/Program Files (x86)/Windows Kits/10/bin"/10.*/x64/signtool.exe 2>/dev/null | sort -V | tail -1)"
+fi
+if [ -z "${AZURE_SIGN_DLIB:-}" ]; then
+    AZURE_SIGN_DLIB="$(find "$TSCT" -path '*x64*' -name Azure.CodeSigning.Dlib.dll 2>/dev/null | head -1)"
+    [ -n "$AZURE_SIGN_DLIB" ] || AZURE_SIGN_DLIB="$(ls ~/.nuget/packages/microsoft.trusted.signing.client/*/bin/x64/Azure.CodeSigning.Dlib.dll 2>/dev/null | sort -V | tail -1)"
+fi
+AZURE_SIGN_METADATA="${AZURE_SIGN_METADATA:-$WIN/windows/trusted-signing.json}"
+
+if [ ! -x "${SIGNTOOL:-/nonexistent}" ] || [ ! -f "${AZURE_SIGN_DLIB:-/nonexistent}" ] \
+    || [ ! -f "$AZURE_SIGN_METADATA" ] || grep -qs REPLACE_ME "$AZURE_SIGN_METADATA"; then
+    echo ">> WARNING: Azure Trusted Signing tooling not configured; building UNSIGNED"
+    sign() { :; }
+else
+    echo ">> signing with $SIGNTOOL"
+    sign() {
+        "$SIGNTOOL" sign /fd SHA256 /td SHA256 /tr http://timestamp.acs.microsoft.com \
+            /dlib "$(cygpath -w "$AZURE_SIGN_DLIB")" \
+            /dmdf "$(cygpath -w "$AZURE_SIGN_METADATA")" \
+            "$(cygpath -w "$1")"
+    }
+fi
 
 # --- Inno Setup compiler -----------------------------------------------------
 rm -rf "$WIN/windows/iscc"
@@ -85,6 +122,10 @@ sign "$STAGE/geph5-client.exe"
 # bin/x86/wintun.dll over blobs/win-ia32/wintun.dll.
 
 # --- Compile the installer ---------------------------------------------------
+# VersionInfoVersion only accepts a numeric quad, but VERSION may look like
+# "v5.8.0" or "v5.8.0-13-gdeadbee" (git describe). Strip it down (see setup.iss).
+VNUM="${VERSION#v}"; VNUM="${VNUM%%[-+]*}"
+export VERSION_NUM="$VNUM.0"
 (cd "$WIN/windows" && sh -c "./iscc/ISCC.exe setup.iss")
 sign "$WIN/windows/Output/geph-windows-setup.exe"
 publish "$WIN/windows/Output/geph-windows-setup.exe" "$ARTIFACT"
