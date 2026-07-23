@@ -205,8 +205,12 @@ fi
 mkdir -p "$STAGE/Applications"
 mv "$BUILD_APP" "$STAGE/Applications/$APP_NAME"
 
+# Geph's LaunchDaemon and package scripts use /Applications/Geph.app. Disable
+# bundle relocation so another copy in Trash, Downloads, or a checkout cannot
+# divert the payload away from that fixed path.
 pkgbuild \
     --root "$STAGE" \
+    --component-plist "$MACOS_DIR/component.plist" \
     --scripts "$MACOS_DIR/pkg-scripts" \
     --identifier "$BUNDLE_ID" \
     --version "$VERSION" \
