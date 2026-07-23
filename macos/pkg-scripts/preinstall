@@ -11,11 +11,9 @@ launchctl bootout system/io.geph.manager 2>/dev/null || true
 # Also boot out the pre-rename label, in case an older dev build is installed.
 launchctl bootout system/io.geph.daemon 2>/dev/null || true
 
-# Quit any running GUI too: replacing the bundle under a live gephgui-wry can
-# invalidate the code signature its WKWebView helper processes are spawned
-# under (blank window), and the survivor would keep holding the port-5678
-# single-instance lock, bouncing every fresh launch back to the broken
-# instance.
+# Stop the old GUI so the next launch runs the newly installed binary. Otherwise
+# it keeps the port-5678 single-instance lock and a new launch merely asks that
+# old process to show its window.
 pkill -x gephgui-wry 2>/dev/null || true
 
 # Kill any leftover engine processes. The manager booted out above is the only
