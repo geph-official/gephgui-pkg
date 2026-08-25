@@ -64,7 +64,7 @@ Name: "{group}\{cm:MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{group}\{cm:UninstallProgram,{cm:MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\{cm:MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 ; Start the GUI at every login, hidden to the tray. The manager already autostarts
-; at boot (the "Geph Manager" task), so the tray is always present whenever the
+; at boot (the Geph Manager Windows service), so the tray is always present whenever the
 ; tunnel is up. This is an all-users Startup shortcut ({commonstartup}) rather
 ; than an HKCU "Run" value because the installer runs elevated — an HKCU write
 ; would land in the admin's hive, not the logged-in user's. `--hidden` makes the
@@ -73,8 +73,8 @@ Name: "{commonstartup}\{cm:MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Param
 
 [Run]
 ; ①  Register + start the privileged background manager. This creates the
-;     "Geph Manager" scheduled task (LocalSystem, runs at boot) and starts it now.
-;     Reuses geph5-app `service::register` — do NOT duplicate the schtasks XML here.
+;     Geph Manager Windows service (LocalSystem, automatic start) and starts it now.
+;     Service registration and recovery policy live in geph5-app.
 Filename: "{app}\geph5.exe"; Parameters: "register-manager"; StatusMsg: "Registering the Geph manager..."; Flags: runhidden waituntilterminated
 ; ②  WebView 2 bootstrapper (unchanged)
 Filename: "{app}\MicrosoftEdgeWebview2Setup"; StatusMsg: "Installing WebView2..."; Parameters: "/install"; Check: WebView2IsNotInstalled
@@ -82,7 +82,7 @@ Filename: "{app}\MicrosoftEdgeWebview2Setup"; StatusMsg: "Installing WebView2...
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{cm:MyAppName}}"; Flags: postinstall nowait skipifsilent
 
 [UninstallRun]
-; Stop + delete the "Geph Manager" scheduled task (reuses `service::unregister`)
+; Stop + delete the Geph Manager Windows service
 ; before the files it points at are removed.
 Filename: "{app}\geph5.exe"; Parameters: "unregister-manager"; RunOnceId: "UnregGephManager"; Flags: runhidden waituntilterminated
 
@@ -109,19 +109,21 @@ end;
 
 // Best-effort: stop a previously-installed manager and any running GUI so their
 // files aren't locked when [InstallDelete] wipes {app} and the new files land.
-procedure StopRunningGeph;
+function StopRunningGeph: Boolean;
   var ResultCode: Integer;
   var GephExe: String;
 begin
+  Result := True;
   GephExe := ExpandConstant('{app}\geph5.exe');
-  if FileExists(GephExe) then
-    Exec(GephExe, 'unregister-manager', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  // `unregister-manager` does `schtasks /End`, which TerminateProcess'es the manager
-  // without running its graceful child-teardown, so the engine child orphans and
-  // keeps geph5-client.exe locked. Kill it (and the manager, as a backstop) directly
-  // so [InstallDelete] / the file copy can replace them. Older managers predate the
-  // kill-on-close job object that now prevents this, so this stays load-bearing for
-  // upgrades from them.
+  if FileExists(GephExe) then begin
+    if (not Exec(GephExe, 'unregister-manager', '', SW_HIDE,
+                 ewWaitUntilTerminated, ResultCode)) or (ResultCode <> 0) then begin
+      Result := False;
+      exit;
+    end;
+  end;
+  // Backstop for upgrades from scheduled-task versions whose hard stop could
+  // orphan the engine. Current service versions stop cooperatively.
   Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM geph5-client.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM geph5.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   // Free the GUI exe (a running instance, or the launcher of a silent self-update).
@@ -131,8 +133,10 @@ end;
 // Runs before [InstallDelete] and file copy.
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
-  StopRunningGeph();
-  Result := '';
+  if StopRunningGeph() then
+    Result := ''
+  else
+    Result := 'Geph could not stop its background service safely. Please retry the installation.';
 end;
 
 // Runs at the very start of uninstall. The manager itself is torn down by the
