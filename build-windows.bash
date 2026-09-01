@@ -61,6 +61,10 @@ rustup target add "$TARGET"
 # an *attempted* signature still aborts the build via set -e — a half-signed
 # release is worse than an unsigned one.
 TSCT="/c/Program Files/Trusted Signing Client Tools"
+AZURE_CLI_WBIN="/c/Program Files/Microsoft SDKs/Azure/CLI2/wbin"
+if [ -f "$AZURE_CLI_WBIN/az.cmd" ]; then
+    export PATH="$AZURE_CLI_WBIN:$PATH"
+fi
 if [ -z "${SIGNTOOL:-}" ]; then
     # Prefer the signtool bundled with the Trusted Signing Client Tools MSI
     # (guaranteed new enough for /dlib); else the newest Windows SDK one.
@@ -68,7 +72,11 @@ if [ -z "${SIGNTOOL:-}" ]; then
     [ -n "$SIGNTOOL" ] || SIGNTOOL="$(ls "/c/Program Files (x86)/Windows Kits/10/bin"/10.*/x64/signtool.exe 2>/dev/null | sort -V | tail -1)"
 fi
 if [ -z "${AZURE_SIGN_DLIB:-}" ]; then
-    AZURE_SIGN_DLIB="$(find "$TSCT" -path '*x64*' -name Azure.CodeSigning.Dlib.dll 2>/dev/null | head -1)"
+    # Current Artifact Signing Client Tools installs the x64 dlib per-user.
+    # Older Trusted Signing releases used the machine-wide TSCT directory.
+    ARTIFACT_SIGN_DLIB="$HOME/AppData/Local/Microsoft/MicrosoftArtifactSigningClientTools/Azure.CodeSigning.Dlib.dll"
+    [ ! -f "$ARTIFACT_SIGN_DLIB" ] || AZURE_SIGN_DLIB="$ARTIFACT_SIGN_DLIB"
+    [ -n "$AZURE_SIGN_DLIB" ] || AZURE_SIGN_DLIB="$(find "$TSCT" -path '*x64*' -name Azure.CodeSigning.Dlib.dll 2>/dev/null | head -1)"
     [ -n "$AZURE_SIGN_DLIB" ] || AZURE_SIGN_DLIB="$(ls ~/.nuget/packages/microsoft.trusted.signing.client/*/bin/x64/Azure.CodeSigning.Dlib.dll 2>/dev/null | sort -V | tail -1)"
 fi
 AZURE_SIGN_METADATA="${AZURE_SIGN_METADATA:-$WIN/windows/trusted-signing.json}"
@@ -80,7 +88,7 @@ if [ ! -x "${SIGNTOOL:-/nonexistent}" ] || [ ! -f "${AZURE_SIGN_DLIB:-/nonexiste
 else
     echo ">> signing with $SIGNTOOL"
     sign() {
-        "$SIGNTOOL" sign /fd SHA256 /td SHA256 /tr http://timestamp.acs.microsoft.com \
+        MSYS2_ARG_CONV_EXCL='*' "$SIGNTOOL" sign /fd SHA256 /td SHA256 /tr http://timestamp.acs.microsoft.com \
             /dlib "$(cygpath -w "$AZURE_SIGN_DLIB")" \
             /dmdf "$(cygpath -w "$AZURE_SIGN_METADATA")" \
             "$(cygpath -w "$1")"

@@ -1,5 +1,16 @@
 {
-  "Endpoint": "https://neu.codesigning.azure.net",
-  "CodeSigningAccountName": "REPLACE_ME_ACCOUNT",
-  "CertificateProfileName": "REPLACE_ME_PROFILE"
+  "Endpoint": "https://plc.codesigning.azure.net/",
+  "CodeSigningAccountName": "Gephyra",
+  "CertificateProfileName": "Gephyra",
+  "ExcludeCredentials": [
+    "EnvironmentCredential",
+    "WorkloadIdentityCredential",
+    "ManagedIdentityCredential",
+    "SharedTokenCacheCredential",
+    "VisualStudioCredential",
+    "VisualStudioCodeCredential",
+    "AzurePowerShellCredential",
+    "AzureDeveloperCliCredential",
+    "InteractiveBrowserCredential"
+  ]
 }
